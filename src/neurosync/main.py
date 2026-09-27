@@ -8,6 +8,8 @@ from neurosync.api.health import router as health_router
 from neurosync.config.logging import configure_logging
 from neurosync.config.settings import settings
 from neurosync.db import close_db
+from neurosync.modules.auth.router import router as auth_router
+from neurosync.modules.doctor_linking.router import router as doctor_linking_router
 
 
 @asynccontextmanager
@@ -36,6 +38,8 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router)
+    app.include_router(auth_router)
+    app.include_router(doctor_linking_router)
 
     return app
 

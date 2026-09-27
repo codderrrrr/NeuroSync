@@ -101,14 +101,19 @@ uv run alembic history
 src/neurosync/
 ├── config/          # Configuration (settings, logging)
 ├── db/              # Database layer (SQLAlchemy, sessions)
-├── api/             # API routes (health, etc.)
+├── api/             # App-wide routes (health)
 ├── modules/         # Business feature modules (domain, persistence, API, tests)
+│   ├── auth/            # Patient signup, login, sessions
+│   └── doctor_linking/  # Doctor codes and patient link requests
+├── scripts/         # Development-only helper scripts
 └── main.py          # FastAPI application entry point
 
 alembic/             # Database migrations
 tests/               # Test suite
   ├── unit/          # Unit tests
   └── integration/   # Integration tests
+apps/
+└── patient_app/     # Flutter patient application
 ```
 
 ## Architecture
@@ -120,6 +125,42 @@ NeuroSync follows a **modular monolith** architecture:
 - Clean separation between configuration, database, API, and modules
 - PostgreSQL as the single source of truth
 - Every schema change requires an Alembic migration
+
+## API (patient phase)
+
+Patient-scoped endpoints always derive the patient from the authenticated
+session; no endpoint accepts a patient identifier from the request.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/auth/signup` | Create a patient account (name, email, password) and start a session |
+| `POST` | `/auth/login` | Sign in and start a session |
+| `POST` | `/auth/logout` | Revoke the current session (idempotent) |
+| `GET` | `/auth/me` | Return the authenticated patient |
+| `POST` | `/doctor-links` | Request a link using a doctor code; creates a `pending` link |
+| `GET` | `/doctor-links` | List the authenticated patient's doctor links |
+| `GET` | `/health` | Liveness probe |
+| `GET` | `/health/db` | Database connectivity probe |
+
+Sessions are opaque random tokens and only a SHA-256 digest is stored, so a
+database leak does not expose usable tokens. The raw token is returned in the
+response body for bearer use and is also set as an `HttpOnly` cookie (`Secure`
+only in production) so browser clients work without exposing it to scripts.
+Doctor acceptance is not implemented yet, so links remain `pending`.
+
+The Flutter patient application lives in `apps/patient_app` — see its
+`README.md` for setup and run instructions.
+
+### Development doctor
+
+Doctors cannot be created through the API in this phase. Provision one for local
+testing:
+
+```bash
+uv run python -m neurosync.scripts.seed_doctor "Dr. Development" ABC123
+```
+
+The script refuses to run when `ENVIRONMENT=production`.
 
 ## Environment Variables
 
