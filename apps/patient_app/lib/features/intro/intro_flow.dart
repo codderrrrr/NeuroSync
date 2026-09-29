@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../app_scope.dart';
+import '../../core/theme/app_theme.dart';
 import '../auth/presentation/auth_flow.dart';
 import '../auth/presentation/splash_screen.dart';
 import '../auth/state/auth_controller.dart';
@@ -80,25 +81,38 @@ class _IntroFlowState extends State<IntroFlow> {
         auth.status == AuthStatus.checking || !_splashElapsed || !_prefsLoaded;
 
     if (showSplash) {
-      return const SplashScreen();
+      return _crossfade(const SplashScreen());
     }
 
     // Returning patients skip the intro entirely; patients who just finished
     // onboarding move through welcome according to the current stage.
     if (_seenOnboarding && _stage == _IntroStage.onboarding) {
-      return const AuthFlow();
+      return _crossfade(const AuthFlow());
     }
 
+    final Widget stage;
     switch (_stage) {
       case _IntroStage.onboarding:
-        return OnboardingScreen(onFinished: _completeOnboarding);
+        stage = OnboardingScreen(onFinished: _completeOnboarding);
       case _IntroStage.welcome:
-        return WelcomeScreen(
+        stage = WelcomeScreen(
           onCreateAccount: () => _openAuth(signUp: true),
           onSignIn: () => _openAuth(signUp: false),
         );
       case _IntroStage.auth:
-        return AuthFlow(initialShowSignUp: _initialSignUp);
+        stage = AuthFlow(initialShowSignUp: _initialSignUp);
     }
+    return _crossfade(stage);
   }
+
+  /// Every stage of the first-time experience sits on the dark base and hands
+  /// over with a short crossfade, so neither the handover between stages nor
+  /// the frame behind them can flash another colour.
+  Widget _crossfade(Widget child) => ColoredBox(
+        color: AppTheme.darkBackground,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          child: child,
+        ),
+      );
 }

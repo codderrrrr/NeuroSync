@@ -74,15 +74,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Divider(height: 26),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const <Widget>[
+                        children: <Widget>[
                           Text(
                             'Status',
                             style: TextStyle(
                               fontSize: 15,
-                              color: AppTheme.secondaryLabel,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
-                          _SignedInPill(),
+                          const _SignedInPill(),
                         ],
                       ),
                     ],
@@ -123,6 +125,7 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -130,18 +133,17 @@ class _DetailRow extends StatelessWidget {
           width: 72,
           child: Text(
             label,
-            style:
-                const TextStyle(fontSize: 15, color: AppTheme.secondaryLabel),
+            style: TextStyle(fontSize: 15, color: scheme.onSurfaceVariant),
           ),
         ),
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
-              color: AppTheme.label,
+              color: scheme.onSurface,
             ),
           ),
         ),

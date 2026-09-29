@@ -31,7 +31,7 @@ Widget wrapLoginScreen({MockClient? mockClient}) {
       repository: DoctorLinkRepository(apiClient: apiClient),
     ),
     child: MaterialApp(
-      theme: AppTheme.light(),
+      theme: AppTheme.dark(),
       home: LoginScreen(onShowSignUp: () {}),
     ),
   );

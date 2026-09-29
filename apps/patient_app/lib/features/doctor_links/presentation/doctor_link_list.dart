@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/formatting/date_format.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_texts.dart';
 import '../models/doctor_link.dart';
@@ -29,7 +28,7 @@ class DoctorLinkList extends StatelessWidget {
     }
 
     if (controller.links.isEmpty) {
-      return const AppCard(
+      return AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -38,11 +37,13 @@ class DoctorLinkList extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.label,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            SizedBox(height: 6),
-            MutedText('Enter the code your doctor gave you to request a link.'),
+            const SizedBox(height: 6),
+            const MutedText(
+              'Enter the code your doctor gave you to request a link.',
+            ),
           ],
         ),
       );
@@ -71,6 +72,7 @@ class _DoctorLinkRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       child: Row(
@@ -81,17 +83,17 @@ class _DoctorLinkRow extends StatelessWidget {
               children: <Widget>[
                 Text(
                   'Doctor #${link.doctorId}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.label,
+                    color: scheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Requested ${formatShortDate(link.createdAt)}',
-                  style: const TextStyle(
-                      fontSize: 14, color: AppTheme.secondaryLabel),
+                  style:
+                      TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
                 ),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app_scope.dart';
+import '../../../core/theme/intro_scale.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/app_texts.dart';
@@ -62,92 +63,123 @@ class _SignUpScreenState extends State<SignUpScreen> {
           tooltip: 'Back to sign in',
         ),
       ),
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: auth,
-          builder: (BuildContext context, Widget? child) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  const LargeTitle('Create account'),
-                  const SizedBox(height: 8),
-                  const MutedText(
-                      'We only ask for what is needed to sign you in.'),
-                  const SizedBox(height: 28),
-                  Form(
-                    key: _formKey,
+      body: IntroTextScale(
+        child: SafeArea(
+          child: ListenableBuilder(
+            listenable: auth,
+            builder: (BuildContext context, Widget? child) => LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                // Four fields and two controls cannot all stay above a
+                // keyboard, so this scrolls by design - but it stays centred
+                // while it fits, and the focused field is always scrolled into
+                // view rather than hidden behind the keyboard.
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight - 32),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        AppTextField(
-                          label: 'Name',
-                          controller: _nameController,
-                          hintText: 'Your full name',
-                          textInputAction: TextInputAction.next,
-                          textCapitalization: TextCapitalization.words,
-                          autofillHints: const <String>[AutofillHints.name],
-                          enabled: !auth.isSubmitting,
-                          validator: _validateName,
+                        const LargeTitle('Create account'),
+                        const SizedBox(height: 8),
+                        const MutedText(
+                            'We only ask for what is needed to sign you in.'),
+                        const SizedBox(height: 28),
+                        // One autofill context per form, so the platform
+                        // password manager can offer and save credentials.
+                        AutofillGroup(
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              children: <Widget>[
+                                AppTextField(
+                                  label: 'Name',
+                                  controller: _nameController,
+                                  hintText: 'Your full name',
+                                  textInputAction: TextInputAction.next,
+                                  textCapitalization: TextCapitalization.words,
+                                  autofillHints: const <String>[
+                                    AutofillHints.name
+                                  ],
+                                  enabled: !auth.isSubmitting,
+                                  validator: _validateName,
+                                ),
+                                const SizedBox(height: 16),
+                                AppTextField(
+                                  label: 'Email',
+                                  controller: _emailController,
+                                  hintText: 'you@example.com',
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  autofillHints: const <String>[
+                                    AutofillHints.email
+                                  ],
+                                  enabled: !auth.isSubmitting,
+                                  validator: _validateEmail,
+                                ),
+                                const SizedBox(height: 16),
+                                AppTextField(
+                                  label: 'Password',
+                                  controller: _passwordController,
+                                  hintText:
+                                      'At least $minimumPasswordLength characters',
+                                  obscureText: true,
+                                  keyboardType: TextInputType.visiblePassword,
+                                  textInputAction: TextInputAction.next,
+                                  autofillHints: const <String>[
+                                    AutofillHints.newPassword
+                                  ],
+                                  enabled: !auth.isSubmitting,
+                                  validator: _validatePassword,
+                                ),
+                                const SizedBox(height: 16),
+                                AppTextField(
+                                  label: 'Confirm password',
+                                  controller: _confirmController,
+                                  hintText: 'Repeat your password',
+                                  obscureText: true,
+                                  keyboardType: TextInputType.visiblePassword,
+                                  textInputAction: TextInputAction.done,
+                                  enabled: !auth.isSubmitting,
+                                  validator: _validateConfirmation,
+                                  onFieldSubmitted: (_) => _submit(),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        AppTextField(
-                          label: 'Email',
-                          controller: _emailController,
-                          hintText: 'you@example.com',
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          autofillHints: const <String>[AutofillHints.email],
-                          enabled: !auth.isSubmitting,
-                          validator: _validateEmail,
+                        if (auth.errorMessage != null) ...<Widget>[
+                          const SizedBox(height: 18),
+                          Semantics(
+                            liveRegion: true,
+                            child: ErrorText(auth.errorMessage!),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        PrimaryButton(
+                          label: 'Create account',
+                          isLoading: auth.isSubmitting,
+                          onPressed: _submit,
+                          tactile: true,
                         ),
-                        const SizedBox(height: 16),
-                        AppTextField(
-                          label: 'Password',
-                          controller: _passwordController,
-                          hintText:
-                              'At least $minimumPasswordLength characters',
-                          obscureText: true,
-                          textInputAction: TextInputAction.next,
-                          autofillHints: const <String>[
-                            AutofillHints.newPassword
-                          ],
-                          enabled: !auth.isSubmitting,
-                          validator: _validatePassword,
-                        ),
-                        const SizedBox(height: 16),
-                        AppTextField(
-                          label: 'Confirm password',
-                          controller: _confirmController,
-                          hintText: 'Repeat your password',
-                          obscureText: true,
-                          textInputAction: TextInputAction.done,
-                          enabled: !auth.isSubmitting,
-                          validator: _validateConfirmation,
-                          onFieldSubmitted: (_) => _submit(),
+                        const SizedBox(height: 12),
+                        SecondaryButton(
+                          label: 'I already have an account',
+                          onPressed:
+                              auth.isSubmitting ? null : widget.onShowSignIn,
+                          tactile: true,
                         ),
                       ],
                     ),
                   ),
-                  if (auth.errorMessage != null) ...<Widget>[
-                    const SizedBox(height: 18),
-                    ErrorText(auth.errorMessage!),
-                  ],
-                  const SizedBox(height: 24),
-                  PrimaryButton(
-                    label: 'Create account',
-                    isLoading: auth.isSubmitting,
-                    onPressed: _submit,
-                  ),
-                  const SizedBox(height: 12),
-                  SecondaryButton(
-                    label: 'I already have an account',
-                    onPressed: auth.isSubmitting ? null : widget.onShowSignIn,
-                  ),
-                ],
-              ),
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
       ),
     );

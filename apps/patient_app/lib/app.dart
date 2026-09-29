@@ -39,7 +39,19 @@ class _NeuroSyncAppState extends State<NeuroSyncApp> {
       child: MaterialApp(
         title: 'NeuroSync',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
+        // One theme for the whole app: Apple Dark Mode, and the same palette the
+        // first-time experience uses, so signing in changes screens and not
+        // worlds.
+        theme: AppTheme.dark(),
+        builder: (BuildContext context, Widget? child) =>
+            AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          child: child!,
+        ),
         home: const _RootView(),
       ),
     );
@@ -61,19 +73,7 @@ class _RootView extends StatelessWidget {
             return const HomeScreen();
           case AuthStatus.checking:
           case AuthStatus.signedOut:
-            // The first-time experience and authentication screens live in
-            // the dark visual system; the signed-in app keeps the light one.
-            return Theme(
-              data: AppTheme.dark(),
-              child: const AnnotatedRegion<SystemUiOverlayStyle>(
-                value: SystemUiOverlayStyle(
-                  statusBarColor: Colors.transparent,
-                  statusBarIconBrightness: Brightness.light,
-                  statusBarBrightness: Brightness.dark,
-                ),
-                child: IntroFlow(),
-              ),
-            );
+            return const IntroFlow();
         }
       },
     );

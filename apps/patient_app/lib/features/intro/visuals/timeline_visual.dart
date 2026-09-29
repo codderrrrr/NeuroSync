@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
-/// Screen 2 - Change over time: a single longitudinal timeline that extends
-/// as the screen appears. Small points are observations; a quiet vertical
-/// marker is medication timing. No numbers, no dashboard.
+/// Chapter 2 - Change over time: one longitudinal line running down the page,
+/// with observations resting on it and a single quiet marker for medication
+/// timing. No numbers, no axes, no dashboard.
+///
+/// [progress] is how far the patient has come through the chapters, so the
+/// line on the page is different on every chapter: a visual about signal
+/// accumulating over time accumulates as the story is read.
 class TimelineVisual extends StatelessWidget {
-  const TimelineVisual({super.key});
+  const TimelineVisual({super.key, this.progress = 1});
 
-  /// Observation points as a fraction of the line, with relative prominence.
+  /// Observation points, as a fraction of the line from top to bottom.
   static const List<double> _points = <double>[
     0.06,
     0.19,
@@ -15,35 +19,35 @@ class TimelineVisual extends StatelessWidget {
     0.57,
     0.71,
     0.84,
-    0.95
+    0.95,
   ];
 
-  /// Which points read as more significant, without any meaning attached.
+  /// Points that read as more prominent, without any meaning attached.
   static const Set<int> _prominent = <int>{3, 6};
 
   /// Medication timing marker, as a fraction of the line.
   static const double _medicationAt = 0.64;
 
+  final double progress;
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    // When progress changes the builder animates from where the line already
+    // was, so the timeline grows rather than replaying from nothing.
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 1700),
-      curve: Curves.easeInOutCubic,
-      builder: (BuildContext context, double progress, Widget? child) {
-        return CustomPaint(
-          painter: _TimelinePainter(
-            progress: progress,
-            lineColor: scheme.onSurfaceVariant,
-            accentColor: scheme.primary,
-            points: _points,
-            prominent: _prominent,
-            medicationAt: _medicationAt,
-          ),
-          child: const SizedBox.expand(),
-        );
-      },
+      tween: Tween<double>(begin: 0, end: progress.clamp(0.0, 1.0)),
+      duration: const Duration(milliseconds: 1100),
+      curve: Curves.easeOutCubic,
+      builder: (BuildContext context, double value, Widget? child) =>
+          CustomPaint(
+        painter: _TimelinePainter(
+          progress: value,
+          lineColor: scheme.onSurfaceVariant,
+          accentColor: scheme.primary,
+        ),
+        child: const SizedBox.expand(),
+      ),
     );
   }
 }
@@ -53,17 +57,11 @@ class _TimelinePainter extends CustomPainter {
     required this.progress,
     required this.lineColor,
     required this.accentColor,
-    required this.points,
-    required this.prominent,
-    required this.medicationAt,
   });
 
   final double progress;
   final Color lineColor;
   final Color accentColor;
-  final List<double> points;
-  final Set<int> prominent;
-  final double medicationAt;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -71,60 +69,69 @@ class _TimelinePainter extends CustomPainter {
       return;
     }
 
-    final double y = size.height * 0.5;
-    final double x0 = size.width * 0.04;
-    final double x1 = size.width * 0.96;
-    final double span = x1 - x0;
-    final double head = x0 + span * progress;
+    final double x = size.width / 2;
+    final double top = size.height * 0.05;
+    final double bottom = size.height * 0.95;
+    final double span = bottom - top;
+    final double head = top + span * progress;
 
-    // The timeline itself: a hairline that extends on entry.
+    // The timeline itself: a hairline that extends as observations arrive.
     final Paint base = Paint()
       ..color = lineColor.withValues(alpha: 0.45)
       ..strokeWidth = 1
       ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(x0, y), Offset(head, y), base);
+    canvas.drawLine(Offset(x, top), Offset(x, head), base);
 
-    // A slightly warmer leading segment suggests the present moment.
-    final Paint lead = Paint()
-      ..color = accentColor.withValues(alpha: 0.8)
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
-    final double leadStart = head - span * 0.06;
+    // A slightly stronger leading segment marks the present moment.
+    final double leadStart = (head - span * 0.06).clamp(top, bottom);
     if (head > leadStart) {
-      canvas.drawLine(
-          Offset(leadStart.clamp(x0, x1), y), Offset(head, y), lead);
+      final Paint lead = Paint()
+        ..color = accentColor.withValues(alpha: 0.8)
+        ..strokeWidth = 1.5
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(Offset(x, leadStart), Offset(x, head), lead);
     }
 
-    // Observation points fade in as the line passes them.
-    for (int i = 0; i < points.length; i++) {
-      final double position = points[i];
+    // Observations settle onto the line as it passes them.
+    for (int i = 0; i < TimelineVisual._points.length; i++) {
+      final double position = TimelineVisual._points[i];
       final double reveal = ((progress - position) * 9).clamp(0.0, 1.0);
       if (reveal <= 0) {
         continue;
       }
-      final bool isProminent = prominent.contains(i);
-      final double radius = isProminent ? 4.0 : 2.5;
+      final double y = top + span * position;
+      final bool prominent = TimelineVisual._prominent.contains(i);
+      if (prominent) {
+        // A quiet ring rather than a bigger dot: emphasis without hierarchy.
+        final Paint ring = Paint()
+          ..color = lineColor.withValues(alpha: 0.28 * reveal)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..isAntiAlias = true;
+        canvas.drawCircle(Offset(x, y), 6, ring);
+      }
       final Paint dot = Paint()
-        ..color = isProminent
-            ? accentColor.withValues(alpha: 0.9 * reveal)
-            : lineColor.withValues(alpha: 0.75 * reveal)
+        ..color = (prominent ? accentColor : lineColor)
+            .withValues(alpha: (prominent ? 0.9 : 0.75) * reveal)
         ..isAntiAlias = true;
-      canvas.drawCircle(Offset(x0 + span * position, y), radius, dot);
+      canvas.drawCircle(Offset(x, y), prominent ? 3.2 : 2.4, dot);
     }
 
-    // Medication timing: one quiet vertical marker.
-    final double medReveal = ((progress - medicationAt) * 6).clamp(0.0, 1.0);
+    // Medication timing: one quiet cross-tick, revealed only once the line has
+    // reached it - context arrives with the data it belongs to.
+    final double medReveal =
+        ((progress - TimelineVisual._medicationAt) * 6).clamp(0.0, 1.0);
     if (medReveal > 0) {
-      final double mx = x0 + span * medicationAt;
+      final double y = top + span * TimelineVisual._medicationAt;
       final Paint marker = Paint()
         ..color = accentColor.withValues(alpha: 0.65 * medReveal)
         ..strokeWidth = 1.2
         ..strokeCap = StrokeCap.round;
-      canvas.drawLine(Offset(mx, y - 15), Offset(mx, y + 15), marker);
+      canvas.drawLine(Offset(x - 14, y), Offset(x + 14, y), marker);
       final Paint cap = Paint()
         ..color = accentColor.withValues(alpha: 0.9 * medReveal)
         ..isAntiAlias = true;
-      canvas.drawCircle(Offset(mx, y - 15), 2, cap);
+      canvas.drawCircle(Offset(x + 14, y), 2, cap);
     }
   }
 

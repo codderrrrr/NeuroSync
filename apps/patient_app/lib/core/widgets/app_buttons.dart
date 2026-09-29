@@ -1,45 +1,70 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/intro_scale.dart';
+import 'tactile_button.dart';
 
 /// Filled primary action with an inline loading state.
+///
+/// On dark, FilledButton's ambient elevation paints the accent colour as a
+/// glow around the control, so the control is deliberately flat and gains its
+/// presence from the fill itself. Disabled is an opaque neutral surface rather
+/// than translucent accent, which reads as muddy on a dark background.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
     required this.label,
     required this.onPressed,
     this.isLoading = false,
+    this.tactile = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
 
+  /// Adds the press response. Enabled by the dark first-time experience only.
+  final bool tactile;
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final bool enabled = isLoading ? false : onPressed != null;
     return SizedBox(
       height: AppTheme.controlHeight,
-      child: FilledButton(
-        onPressed: isLoading ? null : onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
-          disabledBackgroundColor: scheme.primary.withValues(alpha: 0.5),
-          disabledForegroundColor: scheme.onPrimary.withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.fieldRadius),
+      child: TactileButton(
+        enabled: tactile && enabled,
+        child: FilledButton(
+          onPressed: isLoading ? null : onPressed,
+          style: FilledButton.styleFrom(
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            backgroundColor: enabled
+                ? scheme.primary
+                : scheme.onSurface.withValues(alpha: 0.07),
+            foregroundColor:
+                enabled ? scheme.onPrimary : scheme.onSurfaceVariant,
+            // Pressed stays inside the accent family instead of adding a
+            // translucent wash on top of it.
+            overlayColor: const Color(0x1F000000),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.fieldRadius),
+            ),
+            textStyle: TextStyle(
+              fontSize: IntroScale.of(context).buttonLabel,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+          child: isLoading
+              ? SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: scheme.onPrimary),
+                )
+              : Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
         ),
-        child: isLoading
-            ? SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: scheme.onPrimary),
-              )
-            : Text(label),
       ),
     );
   }
@@ -52,28 +77,46 @@ class SecondaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.color,
+    this.tactile = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final Color? color;
+  final bool tactile;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    // On a dark background a hairline is the only thing that separates a
+    // control surface from the page; on light the card already stands off it.
+    final BorderSide? hairline = scheme.brightness == Brightness.dark
+        ? BorderSide(color: scheme.outline)
+        : null;
     return SizedBox(
       height: AppTheme.controlHeight,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: scheme.surface,
-          foregroundColor: color ?? scheme.primary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.fieldRadius),
+      child: TactileButton(
+        enabled: tactile && onPressed != null,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            backgroundColor: scheme.surface,
+            foregroundColor: color ?? scheme.primary,
+            overlayColor: scheme.primary.withValues(alpha: 0.08),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            side: hairline,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.fieldRadius),
+            ),
+            textStyle: TextStyle(
+              fontSize: IntroScale.of(context).buttonLabel,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
         ),
-        child: Text(label),
       ),
     );
   }

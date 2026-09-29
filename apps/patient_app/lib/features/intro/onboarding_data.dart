@@ -20,8 +20,11 @@ class OnboardingChapter {
   final String headline;
   final String body;
 
-  /// The chapter's visual composition.
-  final WidgetBuilder visual;
+  /// Builds the chapter's visual.
+  ///
+  /// [progress] is how far through the chapters the patient has read, so a
+  /// visual about accumulation can accumulate as the story is read.
+  final Widget Function(BuildContext context, double progress) visual;
 }
 
 /// The four onboarding chapters, in order. Content is data-driven so the
@@ -32,30 +35,34 @@ final List<OnboardingChapter> onboardingChapters = <OnboardingChapter>[
     headline: 'Understand your movement.',
     body:
         'Simple daily assessments help reveal how movement changes over time.',
-    visual: _visual(MovementLineVisual.new),
+    // The trace can be drawn by hand, so the patient touches the idea.
+    visual: (BuildContext context, double progress) =>
+        const MovementLineVisual(),
   ),
   OnboardingChapter(
     kicker: 'OVER TIME',
     headline: 'See what changes.',
     body: 'Your assessments, medication timing, and observations come together '
         'to reveal your personal pattern.',
-    visual: _visual(TimelineVisual.new),
+    // Grows with the patient's position in the story.
+    visual: (BuildContext context, double progress) =>
+        TimelineVisual(progress: progress),
   ),
   OnboardingChapter(
     kicker: 'CONNECTED CARE',
     headline: 'Care that stays connected.',
     body:
         'Keep patients, caregivers, and clinicians aligned between appointments.',
-    visual: _visual(ConnectedCareVisual.new),
+    visual: (BuildContext context, double progress) =>
+        const ConnectedCareVisual(),
   ),
   OnboardingChapter(
     kicker: 'PRIVACY',
     headline: 'Your health information stays yours.',
     body: 'Your information is protected and shared only with the people '
         'involved in your care.',
-    visual: _visual(PrivacyBoundaryVisual.new),
+    // Sharing is a gesture here, not a claim.
+    visual: (BuildContext context, double progress) =>
+        const PrivacyBoundaryVisual(),
   ),
 ];
-
-WidgetBuilder _visual(Widget Function() factory) =>
-    (BuildContext context) => factory();

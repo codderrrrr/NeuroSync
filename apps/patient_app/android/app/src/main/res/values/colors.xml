@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The dark base of the app (AppTheme.darkBackground): warm charcoal.
+         Used for the window background before Flutter draws its first frame,
+         so launching never flashes white or an older tint. -->
+    <color name="launch_background">#FF0F0D0B</color>
+</resources>

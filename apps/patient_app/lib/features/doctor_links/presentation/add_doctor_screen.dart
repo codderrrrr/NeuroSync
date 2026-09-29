@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../app_scope.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_text_field.dart';
@@ -62,12 +61,12 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      const Text(
+                      Text(
                         'Enter the code provided by your doctor.',
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.label,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -103,7 +102,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                 ],
                 if (_requestSucceeded) ...<Widget>[
                   const SizedBox(height: 16),
-                  const AppCard(
+                  AppCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -112,11 +111,11 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.label,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
-                        SizedBox(height: 6),
-                        MutedText(
+                        const SizedBox(height: 6),
+                        const MutedText(
                           'Waiting for your doctor to accept the connection.',
                         ),
                       ],
