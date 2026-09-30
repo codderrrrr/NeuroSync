@@ -104,6 +104,7 @@ src/neurosync/
 ├── api/             # App-wide routes (health)
 ├── modules/         # Business feature modules (domain, persistence, API, tests)
 │   ├── auth/            # Patient signup, login, sessions
+│   ├── check_ins/       # Patient-reported symptom check-ins
 │   └── doctor_linking/  # Doctor codes and patient link requests
 ├── scripts/         # Development-only helper scripts
 └── main.py          # FastAPI application entry point
@@ -139,8 +140,15 @@ session; no endpoint accepts a patient identifier from the request.
 | `GET` | `/auth/me` | Return the authenticated patient |
 | `POST` | `/doctor-links` | Request a link using a doctor code; creates a `pending` link |
 | `GET` | `/doctor-links` | List the authenticated patient's doctor links |
+| `POST` | `/check-ins` | Record a symptom check-in (severity 0-4 per symptom) |
+| `GET` | `/check-ins` | List the patient's check-ins, newest first (`limit` 1-100) |
+| `GET` | `/check-ins/{check_in_id}` | Return one check-in owned by the patient |
 | `GET` | `/health` | Liveness probe |
 | `GET` | `/health/db` | Database connectivity probe |
+
+Check-ins store patient-reported motor symptom severity (tremor, stiffness,
+slowness, balance, each 0-4) with an optional note. Ratings are stored exactly
+as reported; the API performs no scoring, interpretation, or diagnosis.
 
 Sessions are opaque random tokens and only a SHA-256 digest is stored, so a
 database leak does not expose usable tokens. The raw token is returned in the

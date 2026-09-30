@@ -21,7 +21,7 @@ _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 _ALEMBIC_EXECUTABLE = Path(sys.executable).parent / "alembic"
 
 # Truncated between tests.
-_DOMAIN_TABLES = "doctor_links, doctor_codes, patient_sessions, patients, doctors"
+_DOMAIN_TABLES = "check_ins, doctor_links, doctor_codes, patient_sessions, patients, doctors"
 
 # pytest-asyncio runs every test on a fresh event loop, and asyncpg connections
 # are bound to the loop that opened them. The suite therefore uses NullPool so

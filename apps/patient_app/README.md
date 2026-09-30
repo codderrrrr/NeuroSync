@@ -1,19 +1,25 @@
 # NeuroSync — Patient App (Flutter)
 
-The patient-facing application for NeuroSync. This phase covers the
-authentication and doctor-linking journey only:
+The patient-facing application for NeuroSync. After sign-in the app is a
+bottom-navigation shell with three decoupled modules:
 
 ```text
 Splash / session check
         ↓
   signed out ──► Login ──► Signup
         ↓
-      Home (profile + doctor links)
-        ↓
-  Add doctor (code) ──► PENDING link
+  ┌──────────────────────────────────────────┐
+│  MainShell (bottom navigation)         │
+│                                          │
+│  Home          Check-ins      Doctors    │
+│  profile +     record & view  link list  │
+│  log out       check-ins      + add code │
+└──────────────────────────────────────────┘
 ```
 
-No monitoring, medication or clinical screens exist yet.
+Check-ins are the patient's raw symptom ratings, stored and shown exactly as
+reported; the app performs no scoring or interpretation. No medication or
+clinical interpretation screens exist yet.
 
 ## Prerequisites
 
@@ -78,8 +84,10 @@ ApiClient (base URL, bearer token, JSON, errors)
 
 - `lib/core/` — configuration, HTTP client, theme, shared widgets, token storage
 - `lib/features/auth/` — models, repository, controller, screens
+- `lib/features/check_ins/` — models, repository, controller, screens
 - `lib/features/doctor_links/` — models, repository, controller, screens
-- `lib/features/home/` — patient home screen
+- `lib/features/home/` — patient home screen (account + log out)
+- `lib/features/shell/` — the signed-in bottom-navigation shell
 
 Controllers are provided through `AppScope` (an `InheritedWidget`) and widgets
 subscribe with `ListenableBuilder`, so rebuilds stay scoped to what changed.
@@ -92,6 +100,8 @@ subscribe with `ListenableBuilder`, so rebuilds stay scoped to what changed.
 - `GET /auth/me` is called exactly once per launch to validate the stored session.
 - A successful link request prepends the link the server returned instead of
   re-fetching the whole list.
+- A saved check-in does the same: the server's row (id, timestamp) is prepended
+  to the history without a re-fetch, and `recorded_at` is stamped server-side.
 
 ### Session handling
 

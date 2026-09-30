@@ -7,6 +7,8 @@ import 'core/network/api_client.dart';
 import 'core/storage/session_token_store.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/state/auth_controller.dart';
+import 'features/check_ins/data/check_in_repository.dart';
+import 'features/check_ins/state/check_in_controller.dart';
 import 'features/doctor_links/data/doctor_link_repository.dart';
 import 'features/doctor_links/state/doctor_link_controller.dart';
 
@@ -36,10 +38,15 @@ void main() {
     repository: DoctorLinkRepository(apiClient: apiClient),
   );
 
+  final CheckInController checkInController = CheckInController(
+    repository: CheckInRepository(apiClient: apiClient),
+  );
+
   runApp(
     NeuroSyncApp(
       authController: authController,
       doctorLinkController: doctorLinkController,
+      checkInController: checkInController,
     ),
   );
 }

@@ -9,6 +9,8 @@ import 'package:neurosync_patient/core/storage/session_token_store.dart';
 import 'package:neurosync_patient/core/theme/app_theme.dart';
 import 'package:neurosync_patient/features/auth/data/auth_repository.dart';
 import 'package:neurosync_patient/features/auth/state/auth_controller.dart';
+import 'package:neurosync_patient/features/check_ins/data/check_in_repository.dart';
+import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
 import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
 import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
 import 'package:neurosync_patient/features/intro/intro_flow.dart';
@@ -26,10 +28,15 @@ void _mockSeen(WidgetTester tester, {required bool seen}) {
   });
 }
 
-Widget wrapIntro(AuthController auth, DoctorLinkController links) {
+Widget wrapIntro(
+  AuthController auth,
+  DoctorLinkController links,
+  CheckInController checkIns,
+) {
   return AppScope(
     auth: auth,
     doctorLinks: links,
+    checkIns: checkIns,
     child: MaterialApp(
       theme: AppTheme.dark(),
       home: const IntroFlow(),
@@ -37,7 +44,7 @@ Widget wrapIntro(AuthController auth, DoctorLinkController links) {
   );
 }
 
-(AuthController, DoctorLinkController) buildControllers() {
+(AuthController, DoctorLinkController, CheckInController) buildControllers() {
   final SessionTokenCache tokenCache = SessionTokenCache();
   final ApiClient apiClient = ApiClient(
     baseUrl: 'http://api.test',
@@ -53,7 +60,10 @@ Widget wrapIntro(AuthController auth, DoctorLinkController links) {
   final DoctorLinkController links = DoctorLinkController(
     repository: DoctorLinkRepository(apiClient: apiClient),
   );
-  return (auth, links);
+  final CheckInController checkIns = CheckInController(
+    repository: CheckInRepository(apiClient: apiClient),
+  );
+  return (auth, links, checkIns);
 }
 
 Future<void> passSplash(WidgetTester tester) async {
@@ -66,11 +76,14 @@ void main() {
   testWidgets('first launch: splash then onboarding',
       (WidgetTester tester) async {
     _mockSeen(tester, seen: false);
-    final (AuthController auth, DoctorLinkController links) =
-        buildControllers();
+    final (
+      AuthController auth,
+      DoctorLinkController links,
+      CheckInController checkIns
+    ) = buildControllers();
     auth.restoreSession();
 
-    await tester.pumpWidget(wrapIntro(auth, links));
+    await tester.pumpWidget(wrapIntro(auth, links, checkIns));
     await passSplash(tester);
 
     expect(find.text('Understand your movement.'), findsOneWidget);
@@ -80,11 +93,14 @@ void main() {
   testWidgets('returning patient goes straight to sign in',
       (WidgetTester tester) async {
     _mockSeen(tester, seen: true);
-    final (AuthController auth, DoctorLinkController links) =
-        buildControllers();
+    final (
+      AuthController auth,
+      DoctorLinkController links,
+      CheckInController checkIns
+    ) = buildControllers();
     auth.restoreSession();
 
-    await tester.pumpWidget(wrapIntro(auth, links));
+    await tester.pumpWidget(wrapIntro(auth, links, checkIns));
     await passSplash(tester);
 
     expect(find.text('Sign in to continue to your care.'), findsOneWidget);
@@ -94,11 +110,14 @@ void main() {
   testWidgets('onboarding completes into welcome, then into authentication',
       (WidgetTester tester) async {
     _mockSeen(tester, seen: false);
-    final (AuthController auth, DoctorLinkController links) =
-        buildControllers();
+    final (
+      AuthController auth,
+      DoctorLinkController links,
+      CheckInController checkIns
+    ) = buildControllers();
     auth.restoreSession();
 
-    await tester.pumpWidget(wrapIntro(auth, links));
+    await tester.pumpWidget(wrapIntro(auth, links, checkIns));
     await passSplash(tester);
 
     // Skip onboarding.

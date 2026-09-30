@@ -4,20 +4,23 @@ import 'package:flutter/services.dart';
 import 'app_scope.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/state/auth_controller.dart';
+import 'features/check_ins/state/check_in_controller.dart';
 import 'features/doctor_links/state/doctor_link_controller.dart';
-import 'features/home/presentation/home_screen.dart';
 import 'features/intro/intro_flow.dart';
+import 'features/shell/presentation/main_shell.dart';
 
-/// Root widget: decides between splash, login and home from auth state.
+/// Root widget: decides between splash, login and the shell from auth state.
 class NeuroSyncApp extends StatefulWidget {
   const NeuroSyncApp({
     super.key,
     required this.authController,
     required this.doctorLinkController,
+    required this.checkInController,
   });
 
   final AuthController authController;
   final DoctorLinkController doctorLinkController;
+  final CheckInController checkInController;
 
   @override
   State<NeuroSyncApp> createState() => _NeuroSyncAppState();
@@ -36,6 +39,7 @@ class _NeuroSyncAppState extends State<NeuroSyncApp> {
     return AppScope(
       auth: widget.authController,
       doctorLinks: widget.doctorLinkController,
+      checkIns: widget.checkInController,
       child: MaterialApp(
         title: 'NeuroSync',
         debugShowCheckedModeBanner: false,
@@ -70,7 +74,7 @@ class _RootView extends StatelessWidget {
       builder: (BuildContext context, Widget? child) {
         switch (auth.status) {
           case AuthStatus.signedIn:
-            return const HomeScreen();
+            return const MainShell();
           case AuthStatus.checking:
           case AuthStatus.signedOut:
             return const IntroFlow();

@@ -6,11 +6,11 @@ import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_texts.dart';
 import '../../auth/state/auth_controller.dart';
-import '../../doctor_links/presentation/add_doctor_screen.dart';
-import '../../doctor_links/presentation/doctor_link_list.dart';
-import '../../doctor_links/state/doctor_link_controller.dart';
 
-/// Patient home: profile summary, doctor links and sign-out.
+/// Patient home: profile summary and sign-out.
+///
+/// Doctor linking and check-ins each live on their own tab of the signed-in
+/// shell, so this screen stays account-only.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -19,28 +19,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Load links once the first frame is up so notifying listeners never
-    // happens during this widget's build.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      AppScope.of(context).doctorLinks.load();
-    });
-  }
-
-  Future<void> _openAddDoctor() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const AddDoctorScreen()),
-    );
-  }
-
   Future<void> _signOut() async {
     final AppScope scope = AppScope.of(context);
     scope.doctorLinks.clear();
+    scope.checkIns.clear();
     await scope.auth.signOut();
   }
 
@@ -48,13 +30,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final AppScope scope = AppScope.of(context);
     final AuthController auth = scope.auth;
-    final DoctorLinkController links = scope.doctorLinks;
     final String name = auth.patient?.name ?? '';
 
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: Listenable.merge(<Listenable>[auth, links]),
+          listenable: auth,
           builder: (BuildContext context, Widget? child) {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
@@ -91,18 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                const SectionHeader('Care team'),
-                if (links.errorMessage != null) ...<Widget>[
-                  ErrorText(links.errorMessage!),
-                  const SizedBox(height: 12),
-                ],
-                DoctorLinkList(controller: links),
-                const SizedBox(height: 24),
-                PrimaryButton(
-                  label: 'Add your doctor',
-                  onPressed: _openAddDoctor,
+                const SectionHeader('Sharing'),
+                const AppCard(
+                  child: MutedText(
+                    'Your check-ins are shared only with doctors you link. '
+                    'Find them under the Doctors tab.',
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
                 SecondaryButton(
                   label: 'Log out',
                   color: AppTheme.danger,

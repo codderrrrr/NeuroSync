@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'features/auth/state/auth_controller.dart';
+import 'features/check_ins/state/check_in_controller.dart';
 import 'features/doctor_links/state/doctor_link_controller.dart';
 
 /// Provides the application's controllers to the widget tree.
@@ -13,11 +14,13 @@ class AppScope extends InheritedWidget {
     super.key,
     required this.auth,
     required this.doctorLinks,
+    required this.checkIns,
     required super.child,
   });
 
   final AuthController auth;
   final DoctorLinkController doctorLinks;
+  final CheckInController checkIns;
 
   static AppScope of(BuildContext context) {
     final AppScope? scope =

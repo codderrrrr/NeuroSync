@@ -9,6 +9,8 @@ import 'package:neurosync_patient/core/theme/app_theme.dart';
 import 'package:neurosync_patient/features/auth/data/auth_repository.dart';
 import 'package:neurosync_patient/features/auth/presentation/login_screen.dart';
 import 'package:neurosync_patient/features/auth/state/auth_controller.dart';
+import 'package:neurosync_patient/features/check_ins/data/check_in_repository.dart';
+import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
 import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
 import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
 
@@ -29,6 +31,9 @@ Widget wrapLoginScreen({MockClient? mockClient}) {
     ),
     doctorLinks: DoctorLinkController(
       repository: DoctorLinkRepository(apiClient: apiClient),
+    ),
+    checkIns: CheckInController(
+      repository: CheckInRepository(apiClient: apiClient),
     ),
     child: MaterialApp(
       theme: AppTheme.dark(),

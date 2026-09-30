@@ -17,6 +17,7 @@ from neurosync.db import Base
 # Importing the feature models registers them on `Base.metadata` so Alembic
 # autogenerate sees the full schema.
 from neurosync.modules.auth import models as auth_models  # noqa: F401
+from neurosync.modules.check_ins import models as check_ins_models  # noqa: F401
 from neurosync.modules.doctor_linking import models as doctor_linking_models  # noqa: F401
 
 config = context.config
