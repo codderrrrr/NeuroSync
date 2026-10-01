@@ -13,7 +13,7 @@ class AppConfig {
 
   static const String apiBaseUrl = String.fromEnvironment(
     'NEUROSYNC_API_BASE_URL',
-    defaultValue: 'http://192.168.3.109:8000',
+    defaultValue: 'http://10.47.182.90:8000',
   );
 
   static const Duration requestTimeout = Duration(seconds: 20);

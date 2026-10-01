@@ -14,10 +14,14 @@ class NeuroSyncApp extends StatefulWidget {
     super.key,
     required this.authController,
     required this.doctorLinkController,
+    required this.checkInController,
+    required this.monitoringController,
   });
 
   final AuthController authController;
   final DoctorLinkController doctorLinkController;
+  final CheckInController checkInController;
+  final MonitoringController monitoringController;
 
   @override
   State<NeuroSyncApp> createState() => _NeuroSyncAppState();
@@ -36,6 +40,8 @@ class _NeuroSyncAppState extends State<NeuroSyncApp> {
     return AppScope(
       auth: widget.authController,
       doctorLinks: widget.doctorLinkController,
+      checkIns: widget.checkInController,
+      monitoring: widget.monitoringController,
       child: MaterialApp(
         title: 'NeuroSync',
         debugShowCheckedModeBanner: false,
