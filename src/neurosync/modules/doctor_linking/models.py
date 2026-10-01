@@ -83,6 +83,9 @@ class DoctorLink(Base):
         nullable=False,
         default=DoctorLinkStatus.PENDING.value,
     )
+    # Derived information about acceptance, not a lifecycle authority: the
+    # ``status`` column stays the single source of truth.
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     log_format: str = "json"
 
     cors_origins: list[str] = Field(
-        default_factory=lambda: ["http://localhost:3000"],
+        default_factory=lambda: ["http://localhost"],
         description="Allowed CORS origins",
     )
 

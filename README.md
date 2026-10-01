@@ -105,7 +105,9 @@ src/neurosync/
 ├── modules/         # Business feature modules (domain, persistence, API, tests)
 │   ├── auth/            # Patient signup, login, sessions
 │   ├── check_ins/       # Patient-reported symptom check-ins
-│   └── doctor_linking/  # Doctor codes and patient link requests
+│   ├── doctor/          # Doctor portal auth + patient roster
+│   ├── doctor_linking/  # Doctor codes and patient link requests
+│   └── monitoring/      # Assessment catalog, plans, sessions, quality
 ├── scripts/         # Development-only helper scripts
 └── main.py          # FastAPI application entry point
 
@@ -114,7 +116,8 @@ tests/               # Test suite
   ├── unit/          # Unit tests
   └── integration/   # Integration tests
 apps/
-└── patient_app/     # Flutter patient application
+├── patient_app/     # Flutter patient application
+└── doctor_web/      # Doctor web portal (Vite + React + TypeScript)
 ```
 
 ## Architecture
@@ -143,12 +146,41 @@ session; no endpoint accepts a patient identifier from the request.
 | `POST` | `/check-ins` | Record a symptom check-in (severity 0-4 per symptom) |
 | `GET` | `/check-ins` | List the patient's check-ins, newest first (`limit` 1-100) |
 | `GET` | `/check-ins/{check_in_id}` | Return one check-in owned by the patient |
+| `GET` | `/assessments` | List the assessment catalog with availability |
+| `GET` | `/monitoring/plan` | Return the patient's active monitoring plan (404 when none) |
+| `POST` | `/monitoring/sessions` | Start a session for a plan item |
+| `POST` | `/monitoring/sessions/{id}/complete` | Submit raw events and complete a session |
+| `GET` | `/monitoring/sessions` | List the patient's sessions, newest first (`limit` 1-100) |
+| `GET` | `/monitoring/sessions/{id}` | Return one session owned by the patient |
+| `POST` | `/doctor/auth/login` | Sign a doctor in to the portal |
+| `POST` | `/doctor/auth/logout` | Revoke the doctor's portal session (idempotent) |
+| `GET` | `/doctor/auth/me` | Return the authenticated doctor |
+| `GET` | `/doctor/patients` | List the doctor's accepted patients |
+| `GET` | `/doctor/patient-links/pending` | List pending patient requests, longest-waiting first |
+| `POST` | `/doctor/patient-links/{link_id}/accept` | Accept a pending patient request |
 | `GET` | `/health` | Liveness probe |
 | `GET` | `/health/db` | Database connectivity probe |
 
 Check-ins store patient-reported motor symptom severity (tremor, stiffness,
 slowness, balance, each 0-4) with an optional note. Ratings are stored exactly
 as reported; the API performs no scoring, interpretation, or diagnosis.
+
+### Monitoring assessments
+
+The assessment catalog is NeuroSync-owned reference data (seeded by migration
+`0004`): only `finger_tapping` is executable today. `spiral_drawing`,
+`line_tracing` and `handwriting` exist in the catalog with
+`is_supported=false` and are surfaced as "Not available yet"; launching one is
+rejected with `409 Conflict`.
+
+A monitoring plan assigns catalog items to a patient with a daily cadence. The
+patient app starts a session, captures **raw tap events** (offsets in
+milliseconds from recording start), and submits them on completion. The server
+then derives descriptive statistics (tap count, mean interval, variability,
+longest pause, tapping rate) and a recording quality of `valid`,
+`borderline`, `incomplete` (too short/too few taps) or `invalid` (ran too
+long). These numbers describe the recording only — there is no scoring, no
+comparison against norms, and no clinical interpretation.
 
 Sessions are opaque random tokens and only a SHA-256 digest is stored, so a
 database leak does not expose usable tokens. The raw token is returned in the
@@ -169,6 +201,71 @@ uv run python -m neurosync.scripts.seed_doctor "Dr. Development" ABC123
 ```
 
 The script refuses to run when `ENVIRONMENT=production`.
+
+### Development monitoring data
+
+Give an existing patient the default "Daily motor check-in" plan (finger
+tapping, one item). Without arguments the script seeds every patient; pass one
+or more emails to restrict it:
+
+```bash
+uv run python -m neurosync.scripts.seed_monitoring
+uv run python -m neurosync.scripts.seed_monitoring patient@example.com
+```
+
+The script is idempotent (a patient with an active plan is skipped) and refuses
+to run when `ENVIRONMENT=production`.
+
+## Doctor Web Portal
+
+The doctor-facing web client lives in `apps/doctor_web` (Vite + React + Type
+Script; no other runtime dependencies). It is a desktop clinical workspace:
+login → dashboard → patient detail.
+
+```bash
+# Provision the demo scenario (doctor + code + patient + pending link)
+uv run python -m neurosync.scripts.seed_doctor_portal
+
+# Run the backend
+uv run uvicorn neurosync.main:app --reload --port 8000
+
+# Run the portal (proxies /api to localhost:8000)
+cd apps/doctor_web && npm install && npm run dev
+```
+
+The seeded doctor signs in with `doctor@example.com` / `portal-dev-password`
+(development only).
+
+What the first doctor slice implements:
+
+- **Doctor authentication** at `/doctor/auth/*` with the same security
+  principles as patient auth: scrypt password hashes only, opaque session
+  tokens persisted as SHA-256 digests, 7-day expiry, revocable sessions, and
+  a separate `doctor_sessions` table plus a separate session cookie, so a
+  patient token can never authenticate a doctor endpoint and vice versa.
+- **Pending patient requests.** When a patient links with a doctor code, the
+  request stays `pending`. The doctor sees it under *Pending requests* with
+  the patient identity and request date.
+- **Accept patient.** Accepting moves the link to `active` and records
+  `accepted_at`. Accepting is idempotent; another doctor's request (or an
+  unknown link) returns `404`, indistinguishable from a missing link.
+- **Active patient roster.** Accepted patients appear with their link status
+  and acceptance date. Clicking one opens a basic patient detail page with
+  explicit *Coming in the next phase* sections for monitoring, check-ins and
+  assessments — no clinical data is shown or fabricated.
+
+Scope notes:
+
+- Doctor linking controls the care-team relationship only.
+- Monitoring plans remain independent of doctor linking in the current
+  patient MVP; the plan's `doctor_id` column is reserved for later use.
+- Doctor plan creation is **not** implemented yet. Monitoring-plan creation,
+  assessment assignment and review of monitoring results arrive in later
+  doctor workflow slices.
+- The Flutter patient application is unchanged by this slice.
+
+Portal checks: `npm run build`, `npm run lint`, `npm test` (Vitest +
+Testing Library) inside `apps/doctor_web`.
 
 ## Environment Variables
 
