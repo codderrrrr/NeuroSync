@@ -5,8 +5,10 @@ import '../../../core/formatting/date_format.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_texts.dart';
+import '../../monitoring/presentation/monitoring_history_section.dart';
 import '../models/check_in.dart';
 import '../state/check_in_controller.dart';
+import '../../monitoring/state/monitoring_controller.dart';
 import 'new_check_in_screen.dart';
 
 /// The check-ins tab: record a new check-in and browse past ones.
@@ -28,6 +30,7 @@ class _CheckInsScreenState extends State<CheckInsScreen> {
         return;
       }
       AppScope.of(context).checkIns.load();
+      AppScope.of(context).monitoring.loadHistory();
     });
   }
 
@@ -40,11 +43,12 @@ class _CheckInsScreenState extends State<CheckInsScreen> {
   @override
   Widget build(BuildContext context) {
     final CheckInController controller = AppScope.of(context).checkIns;
+    final MonitoringController monitoring = AppScope.of(context).monitoring;
 
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: controller,
+          listenable: Listenable.merge(<Listenable>[controller, monitoring]),
           builder: (BuildContext context, Widget? child) {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
@@ -65,6 +69,8 @@ class _CheckInsScreenState extends State<CheckInsScreen> {
                   ErrorText(controller.errorMessage!),
                   const SizedBox(height: 12),
                 ],
+                MonitoringHistorySection(controller: monitoring),
+                const SizedBox(height: 12),
                 ..._history(controller),
               ],
             );

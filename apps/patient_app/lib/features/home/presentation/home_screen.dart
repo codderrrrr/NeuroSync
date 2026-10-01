@@ -6,11 +6,17 @@ import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_texts.dart';
 import '../../auth/state/auth_controller.dart';
+import '../../monitoring/finger_tapping/finger_tapping_runner_screen.dart';
+import '../../monitoring/models/monitoring_plan.dart';
+import '../../monitoring/models/monitoring_session.dart';
+import '../../monitoring/presentation/session_result_screen.dart';
+import '../../monitoring/presentation/todays_assessment_card.dart';
+import '../../monitoring/state/monitoring_controller.dart';
 
-/// Patient home: profile summary and sign-out.
+/// Patient home: today's monitoring, profile summary and sign-out.
 ///
 /// Doctor linking and check-ins each live on their own tab of the signed-in
-/// shell, so this screen stays account-only.
+/// shell, so this screen stays account + monitoring only.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -19,23 +25,92 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load the monitoring plan once the first frame is up so notifying
+    // listeners never happens during this widget's build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      AppScope.of(context).monitoring.loadPlan();
+    });
+  }
+
   Future<void> _signOut() async {
     final AppScope scope = AppScope.of(context);
     scope.doctorLinks.clear();
     scope.checkIns.clear();
+    scope.monitoring.clear();
     await scope.auth.signOut();
+  }
+
+  Future<void> _startAssessment(MonitoringController monitoring) async {
+    final MonitoringPlanItem? next = monitoring.plan?.nextAvailableItem;
+    if (monitoring.plan == null || next == null) {
+      return;
+    }
+    // Guard mirrored from the backend: only assessments with a runner can be
+    // launched, so an unsupported item can never open a broken flow.
+    if (!next.assessment.isExecutable) {
+      return;
+    }
+
+    final bool submitted = await monitoring.startSession(next);
+    if (!mounted || !submitted) {
+      return;
+    }
+
+    final MonitoringSession? completed = await Navigator.of(context)
+        .push<MonitoringSession>(MaterialPageRoute<MonitoringSession>(
+      builder: (_) => FingerTappingRunnerScreen(
+        controller: monitoring,
+        durationSeconds: next.effectiveDurationSeconds,
+        assessmentTitle: next.assessment.title,
+        instructions: next.assessment.instructions,
+      ),
+    ));
+
+    if (completed == null) {
+      // The runner was closed without finishing; refresh plan state anyway.
+      await monitoring.loadPlan();
+      return;
+    }
+
+    // Reload the plan so the card reflects today's completion, then show the
+    // result the backend stored.
+    await monitoring.loadPlan();
+    if (!mounted) {
+      return;
+    }
+    await Navigator.of(context).push<void>(MaterialPageRoute<void>(
+      builder: (_) => Scaffold(
+        body: SafeArea(
+          child: SessionResultScreen(
+            assessmentTitle: completed.assessment.title,
+            completedAt: completed.completedAt,
+            result: completed.result!,
+            onDone: () => Navigator.of(context).pop(),
+          ),
+        ),
+      ),
+    ));
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final AppScope scope = AppScope.of(context);
     final AuthController auth = scope.auth;
-    final String name = auth.patient?.name ?? '';
+    final MonitoringController monitoring = scope.monitoring;
 
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: auth,
+          listenable: Listenable.merge(<Listenable>[auth, monitoring]),
           builder: (BuildContext context, Widget? child) {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
@@ -43,12 +118,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 LargeTitle('Hi, ${auth.patient?.firstName ?? 'there'}'),
                 const SizedBox(height: 6),
                 const MutedText('You are signed in to NeuroSync.'),
+                const SizedBox(height: 24),
+                const SectionHeader('Monitoring'),
+                TodaysAssessmentCard(
+                  plan: monitoring.plan,
+                  isLoading: monitoring.isLoading,
+                  errorMessage: monitoring.errorMessage,
+                  onStart: (_) => _startAssessment(monitoring),
+                  onRetry: monitoring.loadPlan,
+                ),
                 const SizedBox(height: 28),
                 const SectionHeader('Account'),
                 AppCard(
                   child: Column(
                     children: <Widget>[
-                      _DetailRow(label: 'Name', value: name),
+                      _DetailRow(
+                        label: 'Name',
+                        value: auth.patient?.name ?? '',
+                      ),
                       const Divider(height: 26),
                       _DetailRow(
                           label: 'Email', value: auth.patient?.email ?? ''),

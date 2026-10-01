@@ -14,6 +14,8 @@ import 'package:neurosync_patient/features/check_ins/state/check_in_controller.d
 import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
 import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
 import 'package:neurosync_patient/features/intro/intro_flow.dart';
+import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
+import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
 
 const MethodChannel _secureStorage =
     MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
@@ -32,11 +34,13 @@ Widget wrapIntro(
   AuthController auth,
   DoctorLinkController links,
   CheckInController checkIns,
+  MonitoringController monitoring,
 ) {
   return AppScope(
     auth: auth,
     doctorLinks: links,
     checkIns: checkIns,
+    monitoring: monitoring,
     child: MaterialApp(
       theme: AppTheme.dark(),
       home: const IntroFlow(),
@@ -44,7 +48,8 @@ Widget wrapIntro(
   );
 }
 
-(AuthController, DoctorLinkController, CheckInController) buildControllers() {
+(AuthController, DoctorLinkController, CheckInController, MonitoringController)
+    buildControllers() {
   final SessionTokenCache tokenCache = SessionTokenCache();
   final ApiClient apiClient = ApiClient(
     baseUrl: 'http://api.test',
@@ -63,7 +68,10 @@ Widget wrapIntro(
   final CheckInController checkIns = CheckInController(
     repository: CheckInRepository(apiClient: apiClient),
   );
-  return (auth, links, checkIns);
+  final MonitoringController monitoring = MonitoringController(
+    repository: MonitoringRepository(apiClient: apiClient),
+  );
+  return (auth, links, checkIns, monitoring);
 }
 
 Future<void> passSplash(WidgetTester tester) async {
@@ -79,11 +87,12 @@ void main() {
     final (
       AuthController auth,
       DoctorLinkController links,
-      CheckInController checkIns
+      CheckInController checkIns,
+      MonitoringController monitoring
     ) = buildControllers();
     auth.restoreSession();
 
-    await tester.pumpWidget(wrapIntro(auth, links, checkIns));
+    await tester.pumpWidget(wrapIntro(auth, links, checkIns, monitoring));
     await passSplash(tester);
 
     expect(find.text('Understand your movement.'), findsOneWidget);
@@ -96,11 +105,12 @@ void main() {
     final (
       AuthController auth,
       DoctorLinkController links,
-      CheckInController checkIns
+      CheckInController checkIns,
+      MonitoringController monitoring
     ) = buildControllers();
     auth.restoreSession();
 
-    await tester.pumpWidget(wrapIntro(auth, links, checkIns));
+    await tester.pumpWidget(wrapIntro(auth, links, checkIns, monitoring));
     await passSplash(tester);
 
     expect(find.text('Sign in to continue to your care.'), findsOneWidget);
@@ -113,11 +123,12 @@ void main() {
     final (
       AuthController auth,
       DoctorLinkController links,
-      CheckInController checkIns
+      CheckInController checkIns,
+      MonitoringController monitoring
     ) = buildControllers();
     auth.restoreSession();
 
-    await tester.pumpWidget(wrapIntro(auth, links, checkIns));
+    await tester.pumpWidget(wrapIntro(auth, links, checkIns, monitoring));
     await passSplash(tester);
 
     // Skip onboarding.

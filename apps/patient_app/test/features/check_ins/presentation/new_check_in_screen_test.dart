@@ -15,6 +15,8 @@ import 'package:neurosync_patient/features/check_ins/presentation/new_check_in_s
 import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
 import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
 import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
+import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
+import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
 
 /// The check-in form on a route that can actually be popped, so the
 /// save-and-return journey is exercised end to end.
@@ -45,6 +47,9 @@ Future<void> pumpNewCheckIn(WidgetTester tester, MockClient mockClient) async {
       ),
       checkIns: CheckInController(
         repository: CheckInRepository(apiClient: apiClient),
+      ),
+      monitoring: MonitoringController(
+        repository: MonitoringRepository(apiClient: apiClient),
       ),
       child: MaterialApp(
         theme: AppTheme.dark(),

@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -28,12 +29,21 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    // A second tap while the first request is in flight would just duplicate
+    // the login call; ignore it.
+    if (_isSubmitting) {
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
+    setState(() => _isSubmitting = true);
     await AppScope.of(context)
         .auth
         .signIn(email: _email.text.trim(), password: _password.text);
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -109,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                         PrimaryButton(
                           label: 'Sign in',
-                          isLoading: auth.isSubmitting,
+                          isLoading: auth.isSubmitting || _isSubmitting,
                           onPressed: _submit,
                         ),
                         const SizedBox(height: 14),

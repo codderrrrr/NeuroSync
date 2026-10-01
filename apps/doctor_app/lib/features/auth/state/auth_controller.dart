@@ -115,6 +115,11 @@ class AuthController extends ChangeNotifier {
     } on ApiException catch (error) {
       _errorMessage = error.message;
       return false;
+    } catch (_) {
+      // An unexpected failure (secure storage, response parsing) must never
+      // leave the doctor on a silent form; describe it like any other error.
+      _errorMessage = 'Something went wrong. Please try again.';
+      return false;
     } finally {
       _isSubmitting = false;
       notifyListeners();

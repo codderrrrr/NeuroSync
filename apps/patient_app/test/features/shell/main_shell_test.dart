@@ -12,6 +12,8 @@ import 'package:neurosync_patient/features/check_ins/data/check_in_repository.da
 import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
 import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
 import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
+import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
+import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
 import 'package:neurosync_patient/features/shell/presentation/main_shell.dart';
 
 Widget wrapShell() {
@@ -37,6 +39,9 @@ Widget wrapShell() {
     checkIns: CheckInController(
       repository: CheckInRepository(apiClient: apiClient),
     ),
+    monitoring: MonitoringController(
+      repository: MonitoringRepository(apiClient: apiClient),
+    ),
     child: MaterialApp(
       theme: AppTheme.dark(),
       home: const MainShell(),
@@ -50,6 +55,12 @@ int? selectedTab(WidgetTester tester) =>
 void main() {
   testWidgets('opens on the home tab with the account summary',
       (WidgetTester tester) async {
+    // A tall viewport so the whole home list, including the log-out button,
+    // is on screen at once.
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 1600);
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(wrapShell());
     await tester.pumpAndSettle();
 

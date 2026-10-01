@@ -43,7 +43,10 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
     setState(() => _isSubmitting = true);
+    // Resolve dependencies before awaiting so no build context is used after
+    // the gap.
     final AuthController auth = AppScope.of(context).auth;
+    final NavigatorState navigator = Navigator.of(context);
     final bool created = await auth.signUp(
       name: _name.text.trim(),
       email: _email.text.trim(),
@@ -57,7 +60,7 @@ class _SignupScreenState extends State<SignupScreen> {
       // The root already swapped to the dashboard (the controller is signed
       // in); this screen must leave the navigation stack so the doctor
       // actually sees it. Everything between here and the root is auth UI.
-      Navigator.of(context).popUntil((Route<dynamic> route) => route.isFirst);
+      navigator.popUntil((Route<dynamic> route) => route.isFirst);
     }
   }
 
