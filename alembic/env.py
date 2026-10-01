@@ -18,7 +18,9 @@ from neurosync.db import Base
 # autogenerate sees the full schema.
 from neurosync.modules.auth import models as auth_models  # noqa: F401
 from neurosync.modules.check_ins import models as check_ins_models  # noqa: F401
+from neurosync.modules.doctor import models as doctor_models  # noqa: F401
 from neurosync.modules.doctor_linking import models as doctor_linking_models  # noqa: F401
+from neurosync.modules.monitoring import models as monitoring_models  # noqa: F401
 
 config = context.config
 

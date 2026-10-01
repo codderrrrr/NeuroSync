@@ -58,6 +58,11 @@ select = [
 ]
 ignore = []
 
+[tool.ruff.lint.per-file-ignores]
+# Tests assert exact numeric values on purpose; magic-number warnings are noise
+# there, while production code keeps the rule.
+"tests/**" = ["PLR2004"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

@@ -20,8 +20,14 @@ from neurosync.main import app
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 _ALEMBIC_EXECUTABLE = Path(sys.executable).parent / "alembic"
 
-# Truncated between tests.
-_DOMAIN_TABLES = "check_ins, doctor_links, doctor_codes, patient_sessions, patients, doctors"
+# Truncated between tests. ``assessment_definitions`` is deliberately excluded:
+# it is reference data seeded by migration 0004 (mirroring production), so it
+# survives while everything patient-owned is emptied.
+_DOMAIN_TABLES = (
+    "monitoring_results, monitoring_session_events, monitoring_sessions, "
+    "monitoring_plan_items, monitoring_plans, "
+    "check_ins, doctor_links, doctor_codes, doctor_sessions, patient_sessions, patients, doctors"
+)
 
 # pytest-asyncio runs every test on a fresh event loop, and asyncpg connections
 # are bound to the loop that opened them. The suite therefore uses NullPool so

@@ -10,7 +10,10 @@ from neurosync.config.settings import settings
 from neurosync.db import close_db
 from neurosync.modules.auth.router import router as auth_router
 from neurosync.modules.check_ins.router import router as check_ins_router
+from neurosync.modules.doctor import router as doctor_router
 from neurosync.modules.doctor_linking.router import router as doctor_linking_router
+from neurosync.modules.monitoring import catalog_router as monitoring_catalog_router
+from neurosync.modules.monitoring import router as monitoring_router
 
 
 @asynccontextmanager
@@ -33,6 +36,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
+        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -42,6 +46,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(check_ins_router)
     app.include_router(doctor_linking_router)
+    app.include_router(doctor_router)
+    app.include_router(monitoring_catalog_router)
+    app.include_router(monitoring_router)
 
     return app
 
