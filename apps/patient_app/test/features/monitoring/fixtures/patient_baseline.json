@@ -1,0 +1,21 @@
+{
+  "assessment": {
+    "id": 1,
+    "slug": "finger_tapping",
+    "title": "Finger Tapping",
+    "description": "Tap as regularly as you can for a short period so the app can record your tapping rhythm.",
+    "instructions": "Sit comfortably and rest your hand on a table. When the test starts, tap the pad with the finger indicated on screen, at a steady pace that feels natural. Keep tapping until the test finishes on its own.",
+    "execution_type": "tap_task",
+    "default_duration_seconds": 30,
+    "is_supported": true
+  },
+  "observation_count": 4,
+  "valid_observation_count": 4,
+  "borderline_observation_count": 0,
+  "confidence": "full",
+  "taps_per_second": 1.034,
+  "mean_inter_tap_interval_ms": 1000,
+  "inter_tap_variability_ms": 0,
+  "longest_pause_ms": 1000,
+  "explanation": "Baseline established from 4 comparable session(s): 4 valid and 0 borderline."
+}

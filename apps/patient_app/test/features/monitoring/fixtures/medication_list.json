@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "name": "Levodopa",
+    "dose_label": "100mg",
+    "frequency_label": "4 times daily",
+    "is_active": true,
+    "created_at": "2026-10-03T08:13:43.169051Z",
+    "updated_at": "2026-10-03T08:13:43.169051Z"
+  }
+]

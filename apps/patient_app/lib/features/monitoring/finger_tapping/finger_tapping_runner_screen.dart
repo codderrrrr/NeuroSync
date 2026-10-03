@@ -6,6 +6,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_texts.dart';
+import '../../medication/presentation/medication_context_step_sheet.dart';
+import '../../medication/state/medication_controller.dart';
 import '../state/monitoring_controller.dart';
 
 /// The finger-tapping runner: preparation, recording, and hand-off.
@@ -21,12 +23,18 @@ class FingerTappingRunnerScreen extends StatefulWidget {
     required this.durationSeconds,
     required this.assessmentTitle,
     required this.instructions,
+    this.medications,
   });
 
   final MonitoringController controller;
   final int durationSeconds;
   final String assessmentTitle;
   final String instructions;
+
+  /// Used only for the optional medication step between recording and
+  /// submitting. Omitted (in tests, or before the medication list has loaded)
+  /// the step is simply skipped.
+  final MedicationController? medications;
 
   @override
   State<FingerTappingRunnerScreen> createState() =>
@@ -37,6 +45,8 @@ class _FingerTappingRunnerScreenState extends State<FingerTappingRunnerScreen> {
   final List<int> _tapOffsetsMs = <int>[];
   final Stopwatch _stopwatch = Stopwatch();
   Timer? _tickTimer;
+  bool _hasAskedAboutMedication = false;
+  int? _medicationEventId;
 
   bool get _isRecording => _stopwatch.isRunning;
 
@@ -85,8 +95,19 @@ class _FingerTappingRunnerScreenState extends State<FingerTappingRunnerScreen> {
   Future<void> _finish() async {
     _tickTimer?.cancel();
     _stopwatch.stop();
-    final bool submitted =
-        await widget.controller.completeSession(_tapOffsetsMs);
+    // Asked once per recording. A failed submission is retried with the same
+    // answer rather than asking again, so a retry cannot log a second dose.
+    if (!_hasAskedAboutMedication) {
+      _hasAskedAboutMedication = true;
+      _medicationEventId = await _askAboutMedication();
+      if (!mounted) {
+        return;
+      }
+    }
+    final bool submitted = await widget.controller.completeSession(
+      _tapOffsetsMs,
+      medicationEventId: _medicationEventId,
+    );
     if (!mounted) {
       return;
     }
@@ -98,6 +119,27 @@ class _FingerTappingRunnerScreenState extends State<FingerTappingRunnerScreen> {
       // Completion failed: surface the error and let the patient retry.
       setState(() {});
     }
+  }
+
+  /// Offer the medication step and return the dose event to attach, if any.
+  ///
+  /// The recording is already captured by this point, so a patient who
+  /// dismisses the sheet, has no medications recorded, or has no medication
+  /// controller yet still completes their session normally — with the timing
+  /// simply left unknown.
+  Future<int?> _askAboutMedication() async {
+    final MedicationController? medications = widget.medications;
+    if (medications == null) {
+      return null;
+    }
+    if (!medications.hasLoaded) {
+      // Load quietly: a failed load must not block the recording.
+      await medications.load();
+      if (!mounted) {
+        return null;
+      }
+    }
+    return MedicationContextStepSheet.show(context, medications);
   }
 
   @override

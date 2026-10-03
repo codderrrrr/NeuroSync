@@ -15,6 +15,8 @@ import 'package:neurosync_patient/features/check_ins/state/check_in_controller.d
 import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
 import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
 import 'package:neurosync_patient/features/home/presentation/home_screen.dart';
+import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
+import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
 import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
 import 'package:neurosync_patient/features/monitoring/models/session_result.dart';
 import 'package:neurosync_patient/features/monitoring/presentation/session_result_screen.dart';
@@ -114,6 +116,9 @@ Future<AppScope> pumpHome(
     ),
     monitoring: MonitoringController(
       repository: MonitoringRepository(apiClient: apiClient),
+    ),
+    medications: MedicationController(
+      repository: MedicationRepository(apiClient: apiClient),
     ),
     child: MaterialApp(
       theme: AppTheme.dark(),
@@ -232,9 +237,16 @@ void main() {
     await tester.pump(); // flush the tap-counter frame without advancing time
     expect(find.text('3 taps'), findsOneWidget);
 
-    // The zero-second target auto-finishes on the next tick: the captured taps
-    // are submitted as-is and the result screen shows the server's verdict.
+    // The zero-second target auto-finishes on the next tick. The recording is
+    // captured first, and the optional medication step is asked for after it:
+    // the timing a patient reports is the timing around the test they just did.
     await tester.pump(const Duration(milliseconds: 150));
+    await tester.pumpAndSettle();
+
+    // The step is skippable, and skipping is a complete answer: the session is
+    // still submitted, with the medication timing simply left unknown.
+    expect(find.text('Medication check'), findsOneWidget);
+    await tester.tap(find.text('Continue without'));
     await tester.pumpAndSettle();
 
     expect(completedBodies, hasLength(1));
@@ -244,13 +256,18 @@ void main() {
         (body['events'] as List<dynamic>).cast<Map<String, dynamic>>();
     expect(events, hasLength(3));
     expect(events.first['event_type'], 'tap');
+    // Skipping attaches no dose event, and the request says so explicitly
+    // rather than omitting the field and leaving it to be guessed.
+    expect(body['medication_event_id'], isNull);
 
     // Back on the result screen: describes the recording, nothing clinical.
     expect(find.byType(SessionResultScreen), findsOneWidget);
     expect(find.text('Session complete'), findsOneWidget);
     expect(find.text('GOOD RECORDING'), findsOneWidget);
     expect(find.text('42'), findsOneWidget);
-    expect(find.text('YOUR RECORDING'), findsOneWidget);
+    expect(find.text('TAPS RECORDED'), findsOneWidget);
+    expect(find.text('DURATION'), findsOneWidget);
+    expect(find.text('MORE DETAIL'), findsOneWidget);
     expect(find.text('Done'), findsOneWidget);
   });
 
@@ -263,15 +280,13 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),
-        home: Scaffold(
-          body: SafeArea(
-            child: SessionResultScreen(
-              assessmentTitle: 'Finger Tapping',
-              completedAt: DateTime.parse('2026-06-18T10:00:30Z'),
-              result: SessionResult.fromJson(resultJson('incomplete')),
-              onDone: () {},
-            ),
-          ),
+        // The screen is a complete route: it brings its own Scaffold and
+        // SafeArea, so a caller must not wrap it again.
+        home: SessionResultScreen(
+          assessmentTitle: 'Finger Tapping',
+          completedAt: DateTime.parse('2026-06-18T10:00:30Z'),
+          result: SessionResult.fromJson(resultJson('incomplete')),
+          onDone: () {},
         ),
       ),
     );
