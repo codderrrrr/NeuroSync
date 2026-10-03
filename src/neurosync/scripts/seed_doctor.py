@@ -1,9 +1,9 @@
 """Create a development doctor and doctor code.
 
-Doctor authentication and doctor management are out of scope for the patient
-phase, so doctors cannot be created through the API yet. This script is the
-only supported way to provision them, and it refuses to run in production so it
-can never stand in for real doctor onboarding.
+Doctors can also sign up through the portal at ``/doctor/auth/signup``, which
+generates a link code. This script remains the quickest way to provision a
+doctor with a known code for local testing, and it refuses to run in production
+so it can never stand in for real doctor onboarding.
 
 Usage:
     uv run python -m neurosync.scripts.seed_doctor [NAME] [CODE]
@@ -51,7 +51,7 @@ def main() -> None:
         raise SystemExit(PRODUCTION_GUARD_MESSAGE)
 
     doctor_id, code = asyncio.run(seed_doctor(arguments.name, arguments.code.strip().upper()))
-    print(f"doctor_id={doctor_id} doctor_code={code}")  # noqa: T201
+    print(f"doctor_id={doctor_id} doctor_code={code}")
 
 
 if __name__ == "__main__":

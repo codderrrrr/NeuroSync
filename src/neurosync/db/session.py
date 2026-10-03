@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from enum import StrEnum
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -13,6 +14,16 @@ from neurosync.config.settings import settings
 
 class Base(DeclarativeBase):
     pass
+
+
+def sql_values(enum: type[StrEnum]) -> str:
+    """Render enum members as a SQL ``IN (...)`` list for a check constraint.
+
+    Lives here rather than in any one feature module because every module that
+    constrains a stored enum to its Python values needs exactly this, and the
+    constraint text has to stay identical to what the migrations wrote.
+    """
+    return ", ".join(f"'{member.value}'" for member in enum)
 
 
 engine: AsyncEngine = create_async_engine(

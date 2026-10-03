@@ -4,6 +4,11 @@ The catalog is seeded from ``assessment_catalog.ASSESSMENT_CATALOG`` so code and
 database cannot drift. Plans group ordered assessment items; a plan is only
 publishable while every item's assessment is supported. Sessions capture one
 execution of one item, their raw events, and one derived result row.
+
+The longitudinal layer adds two more rows per patient: ``patient_baselines``,
+the patient's own finger-tapping reference derived from their usable history,
+and ``longitudinal_results``, the state one session reached against it. Both
+are reproducible from the stored observations; neither is a clinical score.
 """
 
 from datetime import UTC, datetime
@@ -19,15 +24,16 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from neurosync.db.session import Base
-
-
-def _sql_values(enum: type[StrEnum]) -> str:
-    """Render enum values as a SQL ``IN (...)`` list."""
-    return ", ".join(f"'{member.value}'" for member in enum)
+from neurosync.db.session import Base, sql_values
+from neurosync.modules.medication.models import (
+    EvidenceStrength,
+    MedicationContext,
+    MedicationEvent,
+)
 
 
 class PlanStatus(StrEnum):
@@ -55,6 +61,26 @@ class RecordingQuality(StrEnum):
     BORDERLINE = "borderline"
     INVALID = "invalid"
     INCOMPLETE = "incomplete"
+
+
+class LongitudinalState(StrEnum):
+    """How one observation compares with the patient's own history.
+
+    A monitoring state for a specialist to review. It is not a clinical
+    interpretation and carries no diagnosis or severity meaning.
+    """
+
+    INSUFFICIENT_DATA = "insufficient_data"
+    WITHIN_BASELINE = "within_baseline"
+    CHANGED = "changed"
+    UNRELIABLE = "unreliable"
+
+
+class BaselineConfidence(StrEnum):
+    """How much the contributing observations can be trusted."""
+
+    FULL = "full"
+    REDUCED = "reduced"
 
 
 class AssessmentDefinition(Base):
@@ -92,15 +118,16 @@ class AssessmentDefinition(Base):
 class MonitoringPlan(Base):
     """A set of ordered assessments a patient should perform.
 
-    ``doctor_id`` is optional: the Doctor profile does not exist yet, so
-    development seeds create plans without one. When the doctor workflow
-    arrives, plans gain an owner without changing the patient execution model.
+    ``doctor_id`` is optional: a plan can be created by a doctor through the
+    portal, or by a development seed for a patient who has no doctor yet.
+    Plans are only ever read by patient, so an owner is never required and the
+    patient execution model does not depend on one.
     """
 
     __tablename__ = "monitoring_plans"
     __table_args__ = (
         CheckConstraint(
-            f"status IN ({_sql_values(PlanStatus)})",
+            f"status IN ({sql_values(PlanStatus)})",
             name="ck_monitoring_plans_status",
         ),
         Index("ix_monitoring_plans_patient_id_status", "patient_id", "status"),
@@ -179,7 +206,7 @@ class MonitoringSession(Base):
     __tablename__ = "monitoring_sessions"
     __table_args__ = (
         CheckConstraint(
-            f"status IN ({_sql_values(SessionStatus)})",
+            f"status IN ({sql_values(SessionStatus)})",
             name="ck_monitoring_sessions_status",
         ),
         Index("ix_monitoring_sessions_patient_id_started_at", "patient_id", "started_at"),
@@ -218,6 +245,13 @@ class MonitoringSession(Base):
     # At most one derived result per session; loaded eagerly wherever the
     # session is read so history views never issue per-row queries.
     result: Mapped["MonitoringResult | None"] = relationship(
+        uselist=False,
+        passive_deletes=True,
+    )
+
+    # At most one longitudinal state per session, loaded eagerly alongside the
+    # recording result for the same reason.
+    longitudinal: Mapped["LongitudinalResult | None"] = relationship(
         uselist=False,
         passive_deletes=True,
     )
@@ -263,7 +297,7 @@ class MonitoringResult(Base):
     __tablename__ = "monitoring_results"
     __table_args__ = (
         CheckConstraint(
-            f"quality IN ({_sql_values(RecordingQuality)})",
+            f"quality IN ({sql_values(RecordingQuality)})",
             name="ck_monitoring_results_quality",
         ),
         CheckConstraint("total_taps >= 0", name="ck_monitoring_results_total_taps"),
@@ -293,3 +327,177 @@ class MonitoringResult(Base):
         return (
             f"<MonitoringResult id={self.id} session_id={self.session_id} quality={self.quality}>"
         )
+
+
+class PatientBaseline(Base):
+    """A patient's own finger-tapping reference, derived from their history.
+
+    One row per patient and assessment. The stored values are medians of that
+    patient's usable observations, so the row is a cache of a deterministic
+    computation rather than an independently maintained number:
+    :func:`longitudinal.build_baseline` reproduces it exactly from the stored
+    results, which is what makes the comparison auditable.
+
+    Every value here describes the patient's own recorded performance. Nothing
+    is a population norm, a clinical score, or a diagnosis.
+    """
+
+    __tablename__ = "patient_baselines"
+    __table_args__ = (
+        CheckConstraint(
+            f"confidence IN ({sql_values(BaselineConfidence)})",
+            name="ck_patient_baselines_confidence",
+        ),
+        CheckConstraint(
+            "observation_count >= 0",
+            name="ck_patient_baselines_observation_count",
+        ),
+        UniqueConstraint(
+            "patient_id",
+            "assessment_definition_id",
+            name="uq_patient_baselines_patient_assessment",
+        ),
+        Index("ix_patient_baselines_patient_id", "patient_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    assessment_definition_id: Mapped[int] = mapped_column(
+        ForeignKey("assessment_definitions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    # How many usable observations produced this baseline, split by quality so
+    # a specialist can see how much of it was borderline.
+    observation_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    valid_observation_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    borderline_observation_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Medians of the duration-independent finger-tapping features.
+    taps_per_second: Mapped[float] = mapped_column(nullable=False)
+    mean_inter_tap_interval_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    inter_tap_variability_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    longest_pause_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    confidence: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<PatientBaseline id={self.id} patient_id={self.patient_id} "
+            f"observations={self.observation_count}>"
+        )
+
+
+class LongitudinalResult(Base):
+    """The longitudinal state one session reached, with the evidence for it.
+
+    Exactly one row per session, mirroring ``monitoring_results``. The stored
+    baseline reference and ``changed_features`` are the audit trail: they say
+    which baseline the session was judged against and which features fell
+    outside their tolerance, so a state can always be explained after the fact.
+    """
+
+    __tablename__ = "longitudinal_results"
+    __table_args__ = (
+        CheckConstraint(
+            f"state IN ({sql_values(LongitudinalState)})",
+            name="ck_longitudinal_results_state",
+        ),
+        CheckConstraint(
+            "usable_history_count >= 0",
+            name="ck_longitudinal_results_usable_history_count",
+        ),
+        CheckConstraint(
+            f"medication_context IN ({sql_values(MedicationContext)})",
+            name="ck_longitudinal_results_medication_context",
+        ),
+        CheckConstraint(
+            f"evidence_strength IN ({sql_values(EvidenceStrength)})",
+            name="ck_longitudinal_results_evidence_strength",
+        ),
+        # Elapsed time is absolute; direction lives in medication_context.
+        CheckConstraint(
+            "minutes_since_medication IS NULL OR minutes_since_medication >= 0",
+            name="ck_longitudinal_results_minutes_since_medication",
+        ),
+        Index("ix_longitudinal_results_session_id", "session_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("monitoring_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    # Null when no baseline existed to judge against (insufficient history).
+    baseline_id: Mapped[int | None] = mapped_column(
+        ForeignKey("patient_baselines.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    state: Mapped[str] = mapped_column(String(24), nullable=False)
+    usable_history_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    baseline_confidence: Mapped[str | None] = mapped_column(
+        String(16),
+        nullable=True,
+    )
+    # Which tracked features were outside their tolerance: the "why" behind a
+    # `changed` state.
+    changed_features: Mapped[list | None] = mapped_column(JSON, nullable=True)
+
+    # --- medication context -------------------------------------------------
+    # Supporting context for the comparison above, never a replacement for it.
+    # All nullable: a session recorded before this layer existed, or one with no
+    # medication information, stays exactly as valid as it was.
+    medication_event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("medication_events.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # `unknown` whenever the timing could not be established. Never defaulted
+    # away, so an absent timestamp cannot look like a known window.
+    medication_context: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default=MedicationContext.UNKNOWN.value,
+    )
+    minutes_since_medication: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    # How much supporting information stood behind the interpretation. A
+    # description of how much was recorded, not a probability.
+    evidence_strength: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default=EvidenceStrength.INSUFFICIENT.value,
+    )
+    comparable_observation_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    # Eager-loaded wherever a session is read, so the result screen and history
+    # can name the medication without a per-row query.
+    medication_event: Mapped["MedicationEvent | None"] = relationship(
+        uselist=False,
+        passive_deletes=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
+    def __repr__(self) -> str:
+        return f"<LongitudinalResult id={self.id} session_id={self.session_id} state={self.state}>"

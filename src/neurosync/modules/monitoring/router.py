@@ -8,22 +8,32 @@ HTTP statuses at this boundary only.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neurosync.db import get_session
 from neurosync.modules.auth.dependencies import get_current_patient
 from neurosync.modules.auth.models import Patient
+from neurosync.modules.medication.context import MedicationContextResult
+from neurosync.modules.medication.models import (
+    EvidenceStrength,
+    MedicationContext,
+)
 from neurosync.modules.monitoring import service
 from neurosync.modules.monitoring.models import (
     AssessmentDefinition,
+    LongitudinalResult,
+    LongitudinalState,
     MonitoringSession,
     RecordingQuality,
 )
 from neurosync.modules.monitoring.schemas import (
     AssessmentResponse,
     CompleteSessionRequest,
+    LongitudinalSummaryResponse,
     MonitoringPlanResponse,
     MonitoringSessionResponse,
+    PatientBaselineResponse,
     SessionResultResponse,
     StartSessionRequest,
 )
@@ -66,6 +76,46 @@ def _session_response(
         started_at=monitoring_session.started_at,
         completed_at=monitoring_session.completed_at,
         result=result,
+        longitudinal=_longitudinal_summary(monitoring_session.longitudinal),
+    )
+
+
+def _longitudinal_summary(
+    stored: LongitudinalResult | None,
+) -> LongitudinalSummaryResponse | None:
+    """Render one session's longitudinal state, with its supporting context.
+
+    ``is_confident`` is false whenever the state rests on a reduced-confidence
+    baseline or on no baseline at all, so the client can soften its wording
+    rather than presenting a weakly-supported conclusion as settled.
+
+    The medication block is derived from the stored columns, never recomputed
+    here, so what the client reads is exactly what was persisted at the time.
+    """
+    if stored is None:
+        return None
+    confidence = stored.baseline_confidence
+    context = MedicationContext(stored.medication_context)
+    medication_note = MedicationContextResult(
+        context=context,
+        minutes_since=stored.minutes_since_medication,
+    ).explanation()
+    event = stored.medication_event
+    return LongitudinalSummaryResponse(
+        state=LongitudinalState(stored.state),
+        usable_history_count=stored.usable_history_count,
+        baseline_observation_count=(
+            stored.usable_history_count if confidence is not None else None
+        ),
+        baseline_confidence=confidence,
+        changed_features=list(stored.changed_features or []),
+        is_confident=confidence is not None and confidence == "full",
+        medication_context=context,
+        medication_name=event.medication.name if event is not None else None,
+        minutes_since_medication=stored.minutes_since_medication,
+        evidence_strength=EvidenceStrength(stored.evidence_strength),
+        comparable_observation_count=stored.comparable_observation_count,
+        medication_note=medication_note,
     )
 
 
@@ -114,6 +164,63 @@ async def get_plan(patient: CurrentPatient, session: DbSession) -> MonitoringPla
         status=plan.status,
         items=items,
     )
+
+
+@router.get(
+    "/baseline",
+    response_model=PatientBaselineResponse,
+    summary="Return the patient's own finger-tapping baseline",
+    description=(
+        "Returns the patient's own historical reference for the supported "
+        "assessment: the median of their usable recordings, how many produced "
+        "it, and how much of that history was borderline. Derived from this "
+        "patient's sessions only; there are no population norms. Returns 404 "
+        "until enough usable history exists to establish one."
+    ),
+)
+async def get_baseline(
+    patient: CurrentPatient,
+    session: DbSession,
+) -> PatientBaselineResponse:
+    definition = await _supported_definition(session)
+    stored = await service.get_baseline(
+        session=session,
+        patient_id=patient.id,
+        assessment_definition_id=definition.id,
+    )
+    if stored is None or not stored.observation_count:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not enough usable sessions yet to establish a baseline.",
+        )
+    return PatientBaselineResponse(
+        assessment=_assessment_response(definition),
+        observation_count=stored.observation_count,
+        valid_observation_count=stored.valid_observation_count,
+        borderline_observation_count=stored.borderline_observation_count,
+        confidence=stored.confidence,
+        taps_per_second=stored.taps_per_second,
+        mean_inter_tap_interval_ms=stored.mean_inter_tap_interval_ms,
+        inter_tap_variability_ms=stored.inter_tap_variability_ms,
+        longest_pause_ms=stored.longest_pause_ms,
+        explanation=service.baseline_explanation(stored),
+    )
+
+
+async def _supported_definition(db_session: AsyncSession) -> AssessmentDefinition:
+    """Return the supported assessment the longitudinal layer covers."""
+    definition = await db_session.scalar(
+        select(AssessmentDefinition)
+        .where(AssessmentDefinition.is_supported.is_(True))
+        .order_by(AssessmentDefinition.id)
+        .limit(1)
+    )
+    if definition is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No supported assessment is available.",
+        )
+    return definition
 
 
 @router.post(
@@ -193,6 +300,12 @@ async def complete_session(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
+    except service.UnknownMedicationEventError as exc:
+        # Another patient's dose event is indistinguishable from a missing one.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medication event not found.",
+        ) from exc
 
     definition = await _definition_for(
         session,
@@ -216,7 +329,14 @@ async def list_sessions(
         patient_id=patient.id,
         limit=limit,
     )
-    return [await _session_with_definition(session, s) for s in sessions]
+    # One lookup for the whole page rather than one per session. Every session
+    # in a plan item shares an assessment definition, and loading them
+    # individually issues the same query once per row.
+    definitions = await _definitions_by_id(
+        session,
+        {s.assessment_definition_id for s in sessions},
+    )
+    return [_session_response(s, definitions[s.assessment_definition_id]) for s in sessions]
 
 
 @router.get(
@@ -245,6 +365,26 @@ async def get_session_detail(
             detail="Monitoring session not found.",
         ) from exc
     return await _session_with_definition(session, monitoring_session)
+
+
+async def _definitions_by_id(
+    db_session: AsyncSession,
+    definition_ids: set[int],
+) -> dict[int, AssessmentDefinition]:
+    """Load every assessment definition a page of sessions refers to, at once."""
+    if not definition_ids:
+        return {}
+    rows = await db_session.scalars(
+        select(AssessmentDefinition).where(AssessmentDefinition.id.in_(definition_ids))
+    )
+    by_id = {definition.id: definition for definition in rows}
+    missing = definition_ids - set(by_id)
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The session's assessment definition is missing.",
+        )
+    return by_id
 
 
 async def _definition_for(

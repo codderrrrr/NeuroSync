@@ -466,7 +466,7 @@ async def create_assignment(  # noqa: PLR0913 - explicit arguments beat a config
         session,
         slug=assessment_slug,
     )
-    if definition is None or not definition.is_supported:  # noqa: PLR2004
+    if definition is None or not definition.is_supported:
         raise monitoring_service.UnsupportedAssessmentError(
             monitoring_service.UnassignableAssessmentsMessage.for_slugs([assessment_slug])
         )

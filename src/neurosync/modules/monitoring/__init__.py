@@ -1,5 +1,8 @@
-"""Monitoring: assessment catalog, test plans, sessions, and recordings."""
+"""Monitoring: assessment catalog, test plans, sessions, and recordings.
 
-from neurosync.modules.monitoring.router import catalog_router, router
-
-__all__ = ["catalog_router", "router"]
+This package deliberately re-exports nothing. Importing a router here would run
+it on every import of any submodule - including the pure comparison and routing
+layers - and those layers sit *below* the routers, so the routers would import
+back into them. Import ``neurosync.modules.monitoring.router`` directly when the
+routers are what you need.
+"""

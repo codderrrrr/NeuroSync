@@ -34,7 +34,7 @@ def test_settings_defaults() -> None:
     assert settings.environment == "development"
     assert settings.debug is False
     assert settings.host == "0.0.0.0"
-    assert settings.port == 8000  # noqa: PLR2004
+    assert settings.port == 8000
 
 
 def test_settings_is_production() -> None:

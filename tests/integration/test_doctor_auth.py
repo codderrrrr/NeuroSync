@@ -45,6 +45,54 @@ async def test_login_returns_an_authenticated_session(
 
 
 @pytest.mark.asyncio
+async def test_login_returns_every_field_the_doctor_app_parses(
+    client: AsyncClient,
+    db: AsyncSession,
+) -> None:
+    """Regression: the doctor payload must carry every field the app parses.
+
+    ``Doctor.fromJson`` in the Flutter app reads ``created_at`` as a required
+    String. When the API omitted it, a successful login raised a ``TypeError``
+    that the controller's catch-all turned into "Something went wrong", and the
+    session token was never stored -- the app could not sign a doctor in at all.
+    """
+    await create_doctor(db, name="Dr. Chen", email=DOCTOR_EMAIL, password=DOCTOR_PASSWORD)
+
+    response = await client.post(
+        "/doctor/auth/login",
+        json={"email": DOCTOR_EMAIL, "password": DOCTOR_PASSWORD},
+    )
+
+    assert response.status_code == codes.OK, response.text
+    doctor = response.json()["doctor"]
+    for field in ("id", "name", "email", "created_at", "code"):
+        assert field in doctor, f"doctor payload is missing {field!r}: {doctor}"
+    datetime.fromisoformat(doctor["created_at"])
+
+
+@pytest.mark.asyncio
+async def test_signup_and_me_return_the_same_doctor_fields_as_login(
+    client: AsyncClient,
+) -> None:
+    """Signup and /me share one doctor builder, so they must agree with login."""
+    signup = await client.post(
+        "/doctor/auth/signup",
+        json={
+            "name": "Dr. Osei",
+            "email": "osei@example.com",
+            "password": DOCTOR_PASSWORD,
+        },
+    )
+    assert signup.status_code == codes.CREATED, signup.text
+    token = signup.json()["access_token"]
+
+    me = await client.get("/doctor/auth/me", headers=auth_headers(token))
+
+    assert me.status_code == codes.OK, me.text
+    assert me.json() == signup.json()["doctor"]
+
+
+@pytest.mark.asyncio
 async def test_login_is_case_insensitive_about_the_email(
     client: AsyncClient, db: AsyncSession
 ) -> None:

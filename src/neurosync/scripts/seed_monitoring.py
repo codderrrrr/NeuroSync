@@ -1,9 +1,9 @@
 """Seed the deterministic development monitoring data.
 
-The Doctor profile does not exist yet, so nothing can create monitoring plans
-through the API. This script provisions the default plan ("Daily motor
-check-in") for development patients, so the patient application receives its
-plan from the backend exactly as it will once doctors create real plans.
+A doctor assigns plans through the portal at
+``/doctor/patients/{patient_id}/assignments``. This script provisions the same
+default plan ("Daily motor check-in") for development patients directly, so a
+local patient has a plan without a doctor account.
 
 Seeding is idempotent and additive:
 - the assessment catalog is topped up from the code catalog;
@@ -110,9 +110,9 @@ def main() -> None:
 
     seeded = asyncio.run(run())
     for patient_id in seeded:
-        print(f"seeded default plan for patient_id={patient_id}")  # noqa: T201
+        print(f"seeded default plan for patient_id={patient_id}")
     if not seeded:
-        print("nothing to seed; every patient already has an active plan")  # noqa: T201
+        print("nothing to seed; every patient already has an active plan")
 
 
 if __name__ == "__main__":

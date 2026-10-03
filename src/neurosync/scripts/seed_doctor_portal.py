@@ -172,7 +172,7 @@ def main() -> None:
 
     summary = asyncio.run(seed_doctor_portal(PortalSeedSpec(arguments)))
     for key, value in summary.items():
-        print(f"{key}={value}")  # noqa: T201
+        print(f"{key}={value}")
 
 
 if __name__ == "__main__":

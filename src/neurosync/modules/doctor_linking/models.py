@@ -49,10 +49,11 @@ class DoctorCode(Base):
 class DoctorLink(Base):
     """A patient's request to be connected to a doctor.
 
-    A link starts as ``pending``; only a doctor can accept it, which is out of
-    scope for this phase. The partial unique index keeps the model open to many
-    doctors per patient and many patients per doctor while preventing duplicate
-    pending/active links for the same pair.
+    A link starts as ``pending`` and only the doctor it names can accept it, by
+    posting to ``/doctor/patient-links/{link_id}/accept``. The partial unique
+    index keeps the model open to many doctors per patient and many patients
+    per doctor while preventing duplicate pending/active links for the same
+    pair.
     """
 
     __tablename__ = "doctor_links"

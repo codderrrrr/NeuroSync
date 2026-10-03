@@ -8,7 +8,7 @@ HTTP statuses at this boundary only.
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neurosync.config.settings import settings
@@ -48,6 +48,14 @@ from neurosync.modules.doctor.service import (
     signup_doctor,
 )
 from neurosync.modules.doctor_linking.models import DoctorLinkStatus
+from neurosync.modules.exceptions import service as exception_service
+from neurosync.modules.exceptions.models import ExceptionStatus
+from neurosync.modules.exceptions.schemas import (
+    BaselineFactsResponse,
+    ExceptionDetailResponse,
+    ExceptionSummaryResponse,
+    ReviewExceptionRequest,
+)
 from neurosync.modules.monitoring import service as monitoring_service
 
 router = APIRouter(prefix="/doctor", tags=["doctor"])
@@ -63,6 +71,7 @@ def _doctor_response(doctor: Doctor, code: str | None) -> DoctorResponse:
         id=doctor.id,
         name=doctor.name,
         email=doctor.email or "",
+        created_at=doctor.created_at,
         code=code,
     )
 
@@ -347,3 +356,174 @@ async def create_patient_assignment(
         assessment_title=assignment.assessment_title,
         duration_seconds=assignment.duration_seconds,
     )
+
+
+# ------------------------------------------------------------ review queue
+#
+# Routing decisions the monitoring pipeline made automatically, and the doctor's
+# side of them. The scope is the same active roster the assignment endpoints
+# use: an exception for a patient this doctor is not linked to is reported as
+# missing, exactly as it would be for an id that never existed.
+
+
+def _exception_summary_response(
+    summary: exception_service.ExceptionSummary,
+) -> ExceptionSummaryResponse:
+    return ExceptionSummaryResponse(
+        id=summary.id,
+        patient_id=summary.patient_id,
+        patient_name=summary.patient_name,
+        exception_type=summary.exception_type,
+        status=summary.status,
+        rationale=summary.rationale,
+        created_at=summary.created_at,
+        longitudinal_state=summary.longitudinal_state,
+        evidence_strength=summary.evidence_strength,
+        assessment_title=summary.assessment_title,
+        medication_context=summary.medication_context,
+        minutes_since_medication=summary.minutes_since_medication,
+    )
+
+
+def _exception_detail_response(
+    detail: exception_service.ExceptionDetail,
+) -> ExceptionDetailResponse:
+    baseline = detail.baseline
+    return ExceptionDetailResponse(
+        summary=_exception_summary_response(detail.summary),
+        routing_rule=detail.routing_rule,
+        supporting_observations=detail.supporting_observations,
+        longitudinal_result_id=detail.longitudinal_result_id,
+        monitoring_session_id=detail.monitoring_session_id,
+        usable_history_count=detail.usable_history_count,
+        baseline_confidence=detail.baseline_confidence,
+        changed_features=detail.changed_features,
+        recording_quality=detail.recording_quality,
+        total_taps=detail.total_taps,
+        duration_ms=detail.duration_ms,
+        taps_per_second=detail.taps_per_second,
+        mean_inter_tap_interval_ms=detail.mean_inter_tap_interval_ms,
+        inter_tap_variability_ms=detail.inter_tap_variability_ms,
+        longest_pause_ms=detail.longest_pause_ms,
+        baseline=(
+            None
+            if baseline is None
+            else BaselineFactsResponse(
+                observation_count=baseline.observation_count,
+                confidence=baseline.confidence,
+                taps_per_second=baseline.taps_per_second,
+                mean_inter_tap_interval_ms=baseline.mean_inter_tap_interval_ms,
+                inter_tap_variability_ms=baseline.inter_tap_variability_ms,
+                longest_pause_ms=baseline.longest_pause_ms,
+            )
+        ),
+        reviewed_by_doctor_id=detail.reviewed_by_doctor_id,
+        reviewed_at=detail.reviewed_at,
+        review_note=detail.review_note,
+    )
+
+
+@router.get(
+    "/exceptions",
+    response_model=list[ExceptionSummaryResponse],
+    summary="List the doctor's specialist review queue",
+    description=(
+        "Observations the monitoring pipeline routed for review, newest first, "
+        "for every patient on the doctor's active roster. Each row says why it "
+        "was routed; opening one is a separate request."
+    ),
+)
+async def list_exceptions(
+    doctor: CurrentDoctor,
+    session: DbSession,
+    status_filter: Annotated[
+        ExceptionStatus | None,
+        Query(alias="status", description="Restrict to one queue state"),
+    ] = None,
+    patient_id: Annotated[
+        int | None, Query(description="Restrict to one patient on the roster")
+    ] = None,
+    limit: Annotated[
+        int,
+        Query(
+            ge=1,
+            le=exception_service.MAX_LIST_LIMIT,
+            description="How many rows to return at most",
+        ),
+    ] = exception_service.DEFAULT_LIST_LIMIT,
+) -> list[ExceptionSummaryResponse]:
+    summaries = await exception_service.list_exceptions(
+        session=session,
+        doctor_id=doctor.id,
+        status=status_filter,
+        patient_id=patient_id,
+        limit=limit,
+    )
+    return [_exception_summary_response(summary) for summary in summaries]
+
+
+@router.get(
+    "/exceptions/{exception_id}",
+    response_model=ExceptionDetailResponse,
+    summary="Show one routed observation with its evidence",
+    description=(
+        "The recording behind the routing decision alongside the patient's own "
+        "baseline it was compared against, so a reviewer can see what the "
+        "decision actually rested on."
+    ),
+)
+async def get_exception(
+    exception_id: int,
+    doctor: CurrentDoctor,
+    session: DbSession,
+) -> ExceptionDetailResponse:
+    try:
+        detail = await exception_service.get_exception(
+            session=session,
+            doctor_id=doctor.id,
+            exception_id=exception_id,
+        )
+    except exception_service.ExceptionNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exception not found in your roster.",
+        ) from exc
+    return _exception_detail_response(detail)
+
+
+@router.post(
+    "/exceptions/{exception_id}/review",
+    response_model=ExceptionDetailResponse,
+    summary="Record a doctor's decision about a routed observation",
+    description=(
+        "Closes the exception as reviewed or dismissed, recording who acted, "
+        "when, and any note in the doctor's own words. An exception can be "
+        "closed once; a second attempt is a conflict rather than a silent "
+        "overwrite of the first review."
+    ),
+)
+async def review_exception(
+    exception_id: int,
+    payload: ReviewExceptionRequest,
+    doctor: CurrentDoctor,
+    session: DbSession,
+) -> ExceptionDetailResponse:
+    try:
+        detail = await exception_service.review_exception(
+            session=session,
+            doctor_id=doctor.id,
+            exception_id=exception_id,
+            status=ExceptionStatus(payload.status.value),
+            note=payload.note,
+        )
+    except exception_service.ExceptionNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exception not found in your roster.",
+        ) from exc
+    except exception_service.ReviewAlreadyClosedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This exception has already been reviewed.",
+        ) from exc
+    return _exception_detail_response(detail)

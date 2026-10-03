@@ -516,6 +516,101 @@ async def test_completed_today_counts_sessions_finished_today(
     assert response.json()["items"][0]["completed_today"] == 2
 
 
+# --------------------------------------------- assigned recording duration
+
+
+async def test_quality_judges_a_recording_against_the_assigned_duration(
+    client: AsyncClient,
+    db: AsyncSession,
+) -> None:
+    # Regression: quality was evaluated against the catalog default (30s), so a
+    # patient who correctly recorded for a doctor-assigned 120s exceeded
+    # 2.0 x 30s and every such session was stored as `invalid`.
+    patient_id, token = await signup_patient(client)
+    plan_item_id = await create_default_plan(db, patient_id, duration_seconds=120)
+    session_id = (await _start_session(client, token, plan_item_id))["id"]
+
+    response = await client.post(
+        f"/monitoring/sessions/{session_id}/complete",
+        headers=auth_headers(token),
+        # 120 taps a second apart: a full 119 seconds of steady tapping.
+        json={"events": _steady_taps(count=120, interval_ms=1000)},
+    )
+
+    assert response.status_code == codes.OK, response.text
+    result = response.json()["result"]
+    assert result["duration_ms"] == 119_000
+    assert result["total_taps"] == 120
+    assert result["quality"] == "valid"
+
+
+async def test_quality_falls_back_to_the_catalog_default_without_an_assignment(
+    client: AsyncClient,
+    db: AsyncSession,
+) -> None:
+    # The other half of the rule: with no duration_seconds on the item the
+    # catalog default (30s) is still the target.
+    patient_id, token = await signup_patient(client)
+    plan_item_id = await create_default_plan(db, patient_id)
+    session_id = (await _start_session(client, token, plan_item_id))["id"]
+
+    response = await client.post(
+        f"/monitoring/sessions/{session_id}/complete",
+        headers=auth_headers(token),
+        json={"events": _steady_taps(count=30, interval_ms=1000)},
+    )
+
+    assert response.status_code == codes.OK, response.text
+    result = response.json()["result"]
+    assert result["duration_ms"] == 29_000
+    assert result["quality"] == "valid"
+
+
+async def test_an_assigned_duration_still_rejects_an_over_long_recording(
+    client: AsyncClient,
+    db: AsyncSession,
+) -> None:
+    # The assigned target must be a real target: a recording that overruns it
+    # is still `invalid`, so the fix did not simply disable the duration check.
+    patient_id, token = await signup_patient(client)
+    plan_item_id = await create_default_plan(db, patient_id, duration_seconds=60)
+    session_id = (await _start_session(client, token, plan_item_id))["id"]
+
+    response = await client.post(
+        f"/monitoring/sessions/{session_id}/complete",
+        headers=auth_headers(token),
+        # 150 seconds against a 60-second assignment: over 2.0 x target.
+        json={"events": _steady_taps(count=150, interval_ms=1000)},
+    )
+
+    assert response.status_code == codes.OK, response.text
+    assert response.json()["result"]["quality"] == "invalid"
+
+
+async def test_plan_and_completion_agree_on_the_target_duration(
+    client: AsyncClient,
+    db: AsyncSession,
+) -> None:
+    # The plan the patient is shown and the evaluation of the recording that
+    # came back must resolve the target the same way, so both resolve through
+    # `resolve_item_duration_seconds`.
+    patient_id, token = await signup_patient(client)
+    plan_item_id = await create_default_plan(db, patient_id, duration_seconds=120)
+
+    plan = await client.get("/monitoring/plan", headers=auth_headers(token))
+    assert plan.status_code == codes.OK
+    assert plan.json()["items"][0]["duration_seconds"] == 120
+
+    session_id = (await _start_session(client, token, plan_item_id))["id"]
+    completed = await client.post(
+        f"/monitoring/sessions/{session_id}/complete",
+        headers=auth_headers(token),
+        json={"events": _steady_taps(count=120, interval_ms=1000)},
+    )
+    assert completed.status_code == codes.OK
+    assert completed.json()["result"]["quality"] == "valid"
+
+
 async def test_started_at_is_stored_timezone_aware(
     client: AsyncClient,
     db: AsyncSession,

@@ -8,7 +8,11 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from neurosync.modules.monitoring.models import RecordingQuality
+from neurosync.modules.medication.models import (
+    EvidenceStrength,
+    MedicationContext,
+)
+from neurosync.modules.monitoring.models import LongitudinalState, RecordingQuality
 
 # A 30-second task cannot plausibly produce ten thousand taps; the cap keeps a
 # broken client from flooding the events table while never rejecting honest
@@ -83,6 +87,14 @@ class CompleteSessionRequest(BaseModel):
         description="Raw events in the order the client captured them",
     )
 
+    # Optional reported dose event to attach as context. Omitted means the
+    # patient gave no medication information, and the resulting context stays
+    # `unknown`; it is never inferred from their other records.
+    medication_event_id: int | None = Field(
+        default=None,
+        description="A dose event this patient owns, to attach as context",
+    )
+
 
 class SessionResultResponse(BaseModel):
     """Deterministic summary of one recording; describes the session only."""
@@ -96,6 +108,66 @@ class SessionResultResponse(BaseModel):
     quality: RecordingQuality
 
 
+class LongitudinalSummaryResponse(BaseModel):
+    """How one session compared with the patient's own history.
+
+    A monitoring state for a specialist to review. It carries no diagnosis,
+    severity stage, or treatment meaning, and the supporting counts exist so a
+    patient can see how much history the statement rests on.
+
+    The medication fields are *supporting* context for that comparison, never a
+    second baseline and never an explanation of why the state is what it is.
+    """
+
+    state: LongitudinalState
+    # Usable previous sessions considered when this state was reached.
+    usable_history_count: int
+    # Present once a baseline exists; null while history is still building.
+    baseline_observation_count: int | None
+    baseline_confidence: str | None
+    # Which tracked features were outside their tolerance, for traceability.
+    changed_features: list[str]
+    # Whether the state rests on a fully usable history.
+    is_confident: bool
+
+    # --- medication context -------------------------------------------------
+    # `unknown` whenever timing could not be established, including when the
+    # patient attached no dose event at all.
+    medication_context: MedicationContext = MedicationContext.UNKNOWN
+    medication_name: str | None = Field(
+        default=None,
+        description="The medication the patient attached, exactly as they recorded it",
+    )
+    # Absolute minutes between the reported dose and this assessment; null when
+    # timing is unknown. Never negative: the direction is in the context.
+    minutes_since_medication: int | None = None
+    # How much supporting information stood behind this reading. A description
+    # of how much was recorded, not a probability.
+    evidence_strength: EvidenceStrength = EvidenceStrength.INSUFFICIENT
+    # Earlier usable sessions recorded under this same medication context.
+    comparable_observation_count: int = 0
+    # A cautious, factual sentence describing the timing. Never a clinical
+    # conclusion about the medication.
+    medication_note: str = Field(
+        default="Medication timing was not available for this assessment.",
+    )
+
+
+class PatientBaselineResponse(BaseModel):
+    """The patient's own finger-tapping reference, as the client sees it."""
+
+    assessment: AssessmentResponse
+    observation_count: int
+    valid_observation_count: int
+    borderline_observation_count: int
+    confidence: str
+    taps_per_second: float
+    mean_inter_tap_interval_ms: int
+    inter_tap_variability_ms: int
+    longest_pause_ms: int
+    explanation: str
+
+
 class MonitoringSessionResponse(BaseModel):
     """One execution of a plan item, with its result when completed."""
 
@@ -105,6 +177,7 @@ class MonitoringSessionResponse(BaseModel):
     started_at: datetime
     completed_at: datetime | None
     result: SessionResultResponse | None
+    longitudinal: LongitudinalSummaryResponse | None = None
 
 
 class UnsupportedEventTypeMessage:

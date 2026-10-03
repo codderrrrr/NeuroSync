@@ -29,6 +29,7 @@ class DoctorResponse(BaseModel):
     id: int
     name: str
     email: str
+    created_at: datetime
 
     # The doctor's personal link code (like a classroom join code); patients
     # type it to request a link.
