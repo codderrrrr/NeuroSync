@@ -27,8 +27,11 @@ class IntroFlow extends StatefulWidget {
 }
 
 class _IntroFlowState extends State<IntroFlow> {
-  /// The splash entrance plays in full before anything else appears.
-  static const Duration _splashMinimum = Duration(milliseconds: 1600);
+  /// A short floor so the mark never flashes past. The real gate is the
+  /// session check and the preferences read; when both are already done the
+  /// patient moves on as soon as this minimum has passed, rather than waiting
+  /// out a fixed duration.
+  static const Duration _splashMinimum = Duration(milliseconds: 900);
 
   bool _splashElapsed = false;
   bool _prefsLoaded = false;
@@ -39,22 +42,23 @@ class _IntroFlowState extends State<IntroFlow> {
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(_splashMinimum, () {
+    unawaited(Future<void>.delayed(_splashMinimum, () {
       if (mounted) {
         setState(() => _splashElapsed = true);
       }
-    });
+    }));
     _loadPrefs();
   }
 
   Future<void> _loadPrefs() async {
     final bool seen = await IntroPrefs.hasSeenOnboarding();
-    if (mounted) {
-      setState(() {
-        _seenOnboarding = seen;
-        _prefsLoaded = true;
-      });
+    if (!mounted) {
+      return;
     }
+    setState(() {
+      _seenOnboarding = seen;
+      _prefsLoaded = true;
+    });
   }
 
   void _completeOnboarding() {

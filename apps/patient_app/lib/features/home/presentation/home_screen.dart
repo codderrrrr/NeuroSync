@@ -6,6 +6,8 @@ import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_texts.dart';
 import '../../auth/state/auth_controller.dart';
+import '../../medication/presentation/medications_screen.dart';
+import '../../medication/state/medication_controller.dart';
 import '../../monitoring/finger_tapping/finger_tapping_runner_screen.dart';
 import '../../monitoring/models/monitoring_plan.dart';
 import '../../monitoring/models/monitoring_session.dart';
@@ -43,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
     scope.doctorLinks.clear();
     scope.checkIns.clear();
     scope.monitoring.clear();
+    scope.medications.clear();
     await scope.auth.signOut();
   }
 
@@ -66,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
         .push<MonitoringSession>(MaterialPageRoute<MonitoringSession>(
       builder: (_) => FingerTappingRunnerScreen(
         controller: monitoring,
+        medications: AppScope.of(context).medications,
         durationSeconds: next.effectiveDurationSeconds,
         assessmentTitle: next.assessment.title,
         instructions: next.assessment.instructions,
@@ -84,16 +88,15 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) {
       return;
     }
+    // SessionResultScreen is a complete screen with its own Scaffold and
+    // SafeArea; wrapping it again doubled the system insets on this route.
     await Navigator.of(context).push<void>(MaterialPageRoute<void>(
-      builder: (_) => Scaffold(
-        body: SafeArea(
-          child: SessionResultScreen(
-            assessmentTitle: completed.assessment.title,
-            completedAt: completed.completedAt,
-            result: completed.result!,
-            onDone: () => Navigator.of(context).pop(),
-          ),
-        ),
+      builder: (_) => SessionResultScreen(
+        assessmentTitle: completed.assessment.title,
+        completedAt: completed.completedAt,
+        result: completed.result!,
+        longitudinal: completed.longitudinal,
+        onDone: () => Navigator.of(context).pop(),
       ),
     ));
     if (mounted) {
@@ -106,11 +109,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final AppScope scope = AppScope.of(context);
     final AuthController auth = scope.auth;
     final MonitoringController monitoring = scope.monitoring;
+    final MedicationController medications = scope.medications;
 
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: Listenable.merge(<Listenable>[auth, monitoring]),
+          listenable:
+              Listenable.merge(<Listenable>[auth, monitoring, medications]),
           builder: (BuildContext context, Widget? child) {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
@@ -127,44 +132,106 @@ class _HomeScreenState extends State<HomeScreen> {
                   onStart: (_) => _startAssessment(monitoring),
                   onRetry: monitoring.loadPlan,
                 ),
-                const SizedBox(height: 28),
-                const SectionHeader('Account'),
+                const SizedBox(height: 26),
+                const SectionHeader('Medications'),
                 AppCard(
-                  child: Column(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  onTap: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          MedicationsScreen(controller: medications),
+                    ),
+                  ),
+                  child: Row(
                     children: <Widget>[
-                      _DetailRow(
-                        label: 'Name',
-                        value: auth.patient?.name ?? '',
-                      ),
-                      const Divider(height: 26),
-                      _DetailRow(
-                          label: 'Email', value: auth.patient?.email ?? ''),
-                      const Divider(height: 26),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Text(
-                            'Status',
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Text(
+                              'Medication list',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const _SignedInPill(),
-                        ],
+                            const SizedBox(height: 2),
+                            Text(
+                              medications.medications.isEmpty
+                                  ? 'Add what you take so recordings can carry '
+                                      'timing context'
+                                  : '${medications.activeMedications.length} '
+                                      'current · used as context on results',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppTheme.darkSecondaryLabel,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 28),
-                const SectionHeader('Sharing'),
-                const AppCard(
-                  child: MutedText(
-                    'Your check-ins are shared only with doctors you link. '
-                    'Find them under the Doctors tab.',
+                const SizedBox(height: 26),
+                const SectionHeader('Account'),
+                // One quiet line rather than a card of label/value rows: the
+                // patient already knows their own name, and this screen is for
+                // today's monitoring, not for settings.
+                AppCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
                   ),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              auth.patient?.name ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              auth.patient?.email ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const _SignedInDot(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const MutedText(
+                  'Your check-ins are shared only with doctors you link. '
+                  'Find them under the Doctors tab.',
                 ),
                 const SizedBox(height: 24),
                 SecondaryButton(
@@ -181,61 +248,32 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
+class _SignedInDot extends StatelessWidget {
+  const _SignedInDot();
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        SizedBox(
-          width: 72,
-          child: Text(
-            label,
-            style: TextStyle(fontSize: 15, color: scheme.onSurfaceVariant),
+        Container(
+          width: 7,
+          height: 7,
+          decoration: const BoxDecoration(
+            color: AppTheme.active,
+            shape: BoxShape.circle,
           ),
         ),
-        Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: scheme.onSurface,
-            ),
+        const SizedBox(width: 7),
+        Text(
+          'Signed in',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SignedInPill extends StatelessWidget {
-  const _SignedInPill();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppTheme.activeTint,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: const Text(
-        'SIGNED IN',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: AppTheme.active,
-          letterSpacing: 0.6,
-        ),
-      ),
     );
   }
 }

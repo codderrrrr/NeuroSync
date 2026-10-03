@@ -14,6 +14,8 @@ import 'package:neurosync_patient/features/check_ins/state/check_in_controller.d
 import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
 import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
 import 'package:neurosync_patient/features/intro/intro_flow.dart';
+import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
+import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
 import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
 import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
 
@@ -35,12 +37,14 @@ Widget wrapIntro(
   DoctorLinkController links,
   CheckInController checkIns,
   MonitoringController monitoring,
+  MedicationController medications,
 ) {
   return AppScope(
     auth: auth,
     doctorLinks: links,
     checkIns: checkIns,
     monitoring: monitoring,
+    medications: medications,
     child: MaterialApp(
       theme: AppTheme.dark(),
       home: const IntroFlow(),
@@ -48,8 +52,13 @@ Widget wrapIntro(
   );
 }
 
-(AuthController, DoctorLinkController, CheckInController, MonitoringController)
-    buildControllers() {
+(
+  AuthController,
+  DoctorLinkController,
+  CheckInController,
+  MonitoringController,
+  MedicationController,
+) buildControllers() {
   final SessionTokenCache tokenCache = SessionTokenCache();
   final ApiClient apiClient = ApiClient(
     baseUrl: 'http://api.test',
@@ -68,10 +77,14 @@ Widget wrapIntro(
   final CheckInController checkIns = CheckInController(
     repository: CheckInRepository(apiClient: apiClient),
   );
+  final MedicationController medications = MedicationController(
+    repository: MedicationRepository(apiClient: apiClient),
+  );
+
   final MonitoringController monitoring = MonitoringController(
     repository: MonitoringRepository(apiClient: apiClient),
   );
-  return (auth, links, checkIns, monitoring);
+  return (auth, links, checkIns, monitoring, medications);
 }
 
 Future<void> passSplash(WidgetTester tester) async {
@@ -88,11 +101,13 @@ void main() {
       AuthController auth,
       DoctorLinkController links,
       CheckInController checkIns,
-      MonitoringController monitoring
+      MonitoringController monitoring,
+      MedicationController medications
     ) = buildControllers();
     auth.restoreSession();
 
-    await tester.pumpWidget(wrapIntro(auth, links, checkIns, monitoring));
+    await tester
+        .pumpWidget(wrapIntro(auth, links, checkIns, monitoring, medications));
     await passSplash(tester);
 
     expect(find.text('Understand your movement.'), findsOneWidget);
@@ -106,11 +121,13 @@ void main() {
       AuthController auth,
       DoctorLinkController links,
       CheckInController checkIns,
-      MonitoringController monitoring
+      MonitoringController monitoring,
+      MedicationController medications
     ) = buildControllers();
     auth.restoreSession();
 
-    await tester.pumpWidget(wrapIntro(auth, links, checkIns, monitoring));
+    await tester
+        .pumpWidget(wrapIntro(auth, links, checkIns, monitoring, medications));
     await passSplash(tester);
 
     expect(find.text('Sign in to continue to your care.'), findsOneWidget);
@@ -124,11 +141,13 @@ void main() {
       AuthController auth,
       DoctorLinkController links,
       CheckInController checkIns,
-      MonitoringController monitoring
+      MonitoringController monitoring,
+      MedicationController medications
     ) = buildControllers();
     auth.restoreSession();
 
-    await tester.pumpWidget(wrapIntro(auth, links, checkIns, monitoring));
+    await tester
+        .pumpWidget(wrapIntro(auth, links, checkIns, monitoring, medications));
     await passSplash(tester);
 
     // Skip onboarding.

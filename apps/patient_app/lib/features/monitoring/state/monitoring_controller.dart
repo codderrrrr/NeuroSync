@@ -89,10 +89,18 @@ class MonitoringController extends ChangeNotifier {
 
   /// Completes the active session with the runner's raw tap offsets.
   ///
+  /// [medicationEventId] is the dose the patient reported for this assessment,
+  /// if any. It is passed through untouched: the app does not decide whether
+  /// the timing counts, and a session completed without one is a complete and
+  /// valid outcome rather than a degraded one.
+  ///
   /// The completed session, including the server-computed result, is kept as
   /// [lastCompletedSession] so the result screen can show exactly what the
   /// backend stored.
-  Future<bool> completeSession(List<int> tapOffsetsMs) async {
+  Future<bool> completeSession(
+    List<int> tapOffsetsMs, {
+    int? medicationEventId,
+  }) async {
     final MonitoringSession? active = _activeSession;
     if (active == null) {
       return false;
@@ -104,6 +112,7 @@ class MonitoringController extends ChangeNotifier {
       final MonitoringSession completed = await _repository.completeSession(
         sessionId: active.id,
         tapOffsetsMs: tapOffsetsMs,
+        medicationEventId: medicationEventId,
       );
       _lastCompletedSession = completed;
       _activeSession = null;

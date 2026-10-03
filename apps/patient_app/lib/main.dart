@@ -11,6 +11,8 @@ import 'features/check_ins/data/check_in_repository.dart';
 import 'features/check_ins/state/check_in_controller.dart';
 import 'features/doctor_links/data/doctor_link_repository.dart';
 import 'features/doctor_links/state/doctor_link_controller.dart';
+import 'features/medication/data/medication_repository.dart';
+import 'features/medication/state/medication_controller.dart';
 import 'features/monitoring/data/monitoring_repository.dart';
 import 'features/monitoring/state/monitoring_controller.dart';
 
@@ -48,12 +50,17 @@ void main() {
     repository: MonitoringRepository(apiClient: apiClient),
   );
 
+  final MedicationController medicationController = MedicationController(
+    repository: MedicationRepository(apiClient: apiClient),
+  );
+
   runApp(
     NeuroSyncApp(
       authController: authController,
       doctorLinkController: doctorLinkController,
       checkInController: checkInController,
       monitoringController: monitoringController,
+      medicationController: medicationController,
     ),
   );
 }

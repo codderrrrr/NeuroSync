@@ -4,9 +4,12 @@ import 'package:flutter/services.dart';
 import 'app_scope.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/state/auth_controller.dart';
+import 'features/check_ins/state/check_in_controller.dart';
 import 'features/doctor_links/state/doctor_link_controller.dart';
-import 'features/home/presentation/home_screen.dart';
 import 'features/intro/intro_flow.dart';
+import 'features/medication/state/medication_controller.dart';
+import 'features/monitoring/state/monitoring_controller.dart';
+import 'features/shell/presentation/main_shell.dart';
 
 /// Root widget: decides between splash, login and home from auth state.
 class NeuroSyncApp extends StatefulWidget {
@@ -16,12 +19,14 @@ class NeuroSyncApp extends StatefulWidget {
     required this.doctorLinkController,
     required this.checkInController,
     required this.monitoringController,
+    required this.medicationController,
   });
 
   final AuthController authController;
   final DoctorLinkController doctorLinkController;
   final CheckInController checkInController;
   final MonitoringController monitoringController;
+  final MedicationController medicationController;
 
   @override
   State<NeuroSyncApp> createState() => _NeuroSyncAppState();
@@ -42,6 +47,7 @@ class _NeuroSyncAppState extends State<NeuroSyncApp> {
       doctorLinks: widget.doctorLinkController,
       checkIns: widget.checkInController,
       monitoring: widget.monitoringController,
+      medications: widget.medicationController,
       child: MaterialApp(
         title: 'NeuroSync',
         debugShowCheckedModeBanner: false,
@@ -76,7 +82,9 @@ class _RootView extends StatelessWidget {
       builder: (BuildContext context, Widget? child) {
         switch (auth.status) {
           case AuthStatus.signedIn:
-            return const HomeScreen();
+            // The shell, not HomeScreen directly: check-ins and doctor
+            // linking live on their own tabs and are otherwise unreachable.
+            return const MainShell();
           case AuthStatus.checking:
           case AuthStatus.signedOut:
             return const IntroFlow();

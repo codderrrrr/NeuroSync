@@ -1,4 +1,5 @@
 import 'assessment.dart';
+import 'longitudinal_summary.dart';
 import 'session_result.dart';
 
 /// One execution of a monitoring assessment.
@@ -10,6 +11,7 @@ class MonitoringSession {
     required this.startedAt,
     required this.completedAt,
     required this.result,
+    required this.longitudinal,
   });
 
   factory MonitoringSession.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,11 @@ class MonitoringSession {
       result: json['result'] == null
           ? null
           : SessionResult.fromJson(json['result'] as Map<String, dynamic>),
+      longitudinal: json['longitudinal'] == null
+          ? null
+          : LongitudinalSummary.fromJson(
+              json['longitudinal'] as Map<String, dynamic>,
+            ),
     );
   }
 
@@ -34,6 +41,7 @@ class MonitoringSession {
   final DateTime startedAt;
   final DateTime? completedAt;
   final SessionResult? result;
+  final LongitudinalSummary? longitudinal;
 
   bool get isCompleted => status == 'completed';
 }

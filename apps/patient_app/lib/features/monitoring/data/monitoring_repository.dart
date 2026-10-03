@@ -26,9 +26,14 @@ class MonitoringRepository {
   }
 
   /// Completes a session with the raw tap events captured by the runner.
+  ///
+  /// [medicationEventId] attaches a dose the patient already reported as
+  /// supporting context. It is optional and the server never guesses one: when
+  /// it is null the resulting context stays unknown.
   Future<MonitoringSession> completeSession({
     required int sessionId,
     required List<int> tapOffsetsMs,
+    int? medicationEventId,
   }) async {
     final Map<String, dynamic> body = await _apiClient.postObject(
       '/monitoring/sessions/$sessionId/complete',
@@ -37,6 +42,7 @@ class MonitoringRepository {
           for (final int offsetMs in tapOffsetsMs)
             <String, dynamic>{'event_type': 'tap', 'offset_ms': offsetMs},
         ],
+        'medication_event_id': medicationEventId,
       },
     );
     return MonitoringSession.fromJson(body);

@@ -16,10 +16,14 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
+  /// Short enough not to feel like a wait, long enough for the mark to read as
+  /// a deliberate entrance rather than a flash.
+  static const Duration _entrance = Duration(milliseconds: 1100);
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1500),
-  )..forward();
+    duration: _entrance,
+  );
 
   late final Animation<double> _markProgress = CurvedAnimation(
     parent: _controller,
@@ -32,9 +36,34 @@ class _SplashScreenState extends State<SplashScreen>
   );
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // With system animation turned off the mark appears finished and the
+    // wordmark fully faded in, rather than animating to a state the patient
+    // has asked not to be shown.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = 1;
+    } else if (!_controller.isAnimating) {
+      _controller.forward();
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant SplashScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The stage can be rebuilt while the entrance is still running; restart it
+    // so a reduced-motion change takes effect immediately.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = 1;
+    } else if (_controller.isDismissed) {
+      _controller.forward(from: 0);
+    }
   }
 
   @override

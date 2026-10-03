@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/formatting/date_format.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_texts.dart';
+import '../models/longitudinal_summary.dart';
 import '../models/monitoring_session.dart';
 import '../state/monitoring_controller.dart';
 
@@ -94,7 +96,15 @@ class _SessionRow extends StatelessWidget {
               ],
             ),
           ),
-          _QualityChip(label: session.result?.quality.label ?? 'Completed'),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              if (session.longitudinal != null)
+                _LongitudinalChip(state: session.longitudinal!.state),
+              const SizedBox(height: 4),
+              _QualityChip(label: session.result?.quality.label ?? 'Completed'),
+            ],
+          ),
         ],
       ),
     );
@@ -120,6 +130,46 @@ class _QualityChip extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+    );
+  }
+}
+
+/// The longitudinal state for one history row.
+///
+/// Tinted rather than plain so the longitudinal signal reads first while the
+/// recording quality stays visible underneath it.
+class _LongitudinalChip extends StatelessWidget {
+  const _LongitudinalChip({required this.state});
+
+  final LongitudinalState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final Color color;
+    switch (state) {
+      case LongitudinalState.withinBaseline:
+        color = AppTheme.active;
+      case LongitudinalState.changed:
+        color = AppTheme.pending;
+      case LongitudinalState.insufficientData:
+      case LongitudinalState.unreliable:
+        color = scheme.onSurfaceVariant;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        state.shortLabel,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
         ),
       ),
     );

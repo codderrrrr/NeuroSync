@@ -7,13 +7,15 @@
 /// flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://192.168.1.10:8000
 /// ```
 ///
-/// The default targets the Android emulator's alias for the host machine.
+/// The default is the development machine's LAN address, so a physical device
+/// on the same network can reach the backend. Override it per run; Android
+/// emulators can use `http://10.0.2.2:8000` to reach the host instead.
 class AppConfig {
   const AppConfig._();
 
   static const String apiBaseUrl = String.fromEnvironment(
     'NEUROSYNC_API_BASE_URL',
-    defaultValue: 'http://10.47.182.90:8000',
+    defaultValue: 'http://192.168.3.109:8000',
   );
 
   static const Duration requestTimeout = Duration(seconds: 20);

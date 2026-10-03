@@ -15,6 +15,8 @@ import 'package:neurosync_patient/features/check_ins/data/check_in_repository.da
 import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
 import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
 import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
+import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
+import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
 import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
 import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
 
@@ -53,6 +55,9 @@ Future<void> pumpAuthScreen(
       ),
       monitoring: MonitoringController(
         repository: MonitoringRepository(apiClient: apiClient),
+      ),
+      medications: MedicationController(
+        repository: MedicationRepository(apiClient: apiClient),
       ),
       child: MaterialApp(
         theme: AppTheme.dark(),
