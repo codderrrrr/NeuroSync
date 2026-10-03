@@ -47,23 +47,42 @@ class AuthController extends ChangeNotifier {
   /// The stored token is verified against `GET /auth/me` rather than trusted,
   /// so a revoked or expired session lands on the login screen.
   Future<void> restoreSession() async {
-    final String? token = await _tokenStore.read();
-    if (token == null) {
-      _status = AuthStatus.signedOut;
-      notifyListeners();
-      return;
-    }
-
-    _tokenCache.value = token;
     try {
+      final String? token = await _tokenStore.read();
+      if (token == null) {
+        _signedOut();
+        return;
+      }
+
+      _tokenCache.value = token;
       _patient = await _repository.currentPatient();
       _status = AuthStatus.signedIn;
-    } on ApiException {
+    } catch (_) {
+      // Anything can fail here -- a revoked session, an unreachable server, a
+      // keystore that will not open, or a response the model cannot parse.
+      // None of those may leave the status at `checking`, because the root
+      // view renders `checking` as a splash screen with no way out.
       _tokenCache.value = null;
-      await _tokenStore.clear();
-      _patient = null;
-      _status = AuthStatus.signedOut;
+      await _discardStoredToken();
+      _signedOut();
+      return;
     }
+    notifyListeners();
+  }
+
+  /// Clears the persisted session, ignoring a failure to do so.
+  Future<void> _discardStoredToken() async {
+    try {
+      await _tokenStore.clear();
+    } catch (_) {
+      // The in-memory session is gone either way; a keystore that cannot be
+      // cleared must not strand the patient on the splash screen.
+    }
+  }
+
+  void _signedOut() {
+    _patient = null;
+    _status = AuthStatus.signedOut;
     notifyListeners();
   }
 
@@ -83,14 +102,12 @@ class AuthController extends ChangeNotifier {
   Future<void> signOut() async {
     try {
       await _repository.logOut();
-    } on ApiException {
+    } catch (_) {
       // Signing out locally must succeed even if the server call fails.
     }
     _tokenCache.value = null;
-    await _tokenStore.clear();
-    _patient = null;
-    _status = AuthStatus.signedOut;
-    notifyListeners();
+    await _discardStoredToken();
+    _signedOut();
   }
 
   void clearError() {
@@ -114,6 +131,15 @@ class AuthController extends ChangeNotifier {
       return true;
     } on ApiException catch (error) {
       _errorMessage = error.message;
+      // A rejected credential is never a session worth checking; without this
+      // the status could stay `checking` and swap the form for the splash.
+      _status = AuthStatus.signedOut;
+      return false;
+    } catch (_) {
+      // An unexpected failure (secure storage, response parsing) must never
+      // leave the patient on a silent form; describe it like any other error.
+      _errorMessage = 'Something went wrong. Please try again.';
+      _status = AuthStatus.signedOut;
       return false;
     } finally {
       _isSubmitting = false;

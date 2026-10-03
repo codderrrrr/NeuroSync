@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -37,6 +38,19 @@ AuthController buildController({
     tokenStore: tokenStore,
     tokenCache: tokenCache,
   );
+}
+
+/// A store that fails the way a platform keystore can: reading throws instead
+/// of returning a token.
+class _FailingSessionTokenStore implements SessionTokenStore {
+  @override
+  Future<String?> read() async => throw StateError('keystore unavailable');
+
+  @override
+  Future<void> write(String token) async {}
+
+  @override
+  Future<void> clear() async => throw StateError('keystore unavailable');
 }
 
 void main() {
@@ -86,6 +100,114 @@ void main() {
 
     expect(controller.status, AuthStatus.signedOut);
     expect(await store.read(), isNull);
+  });
+
+  test('restoring lands signed out when secure storage cannot be read',
+      () async {
+    // Regression: the token read used to sit outside the try block, so a
+    // keystore failure escaped restoreSession with the status still `checking`.
+    // IntroFlow renders `checking` as the splash screen, so the patient was
+    // stuck on splash forever with no way to sign in.
+    final AuthController controller = buildController(
+      mockClient: MockClient(
+        (http.Request request) async => http.Response(_patientJson, 200),
+      ),
+      tokenStore: _FailingSessionTokenStore(),
+    );
+
+    await controller.restoreSession();
+
+    expect(controller.status, AuthStatus.signedOut);
+    expect(controller.patient, isNull);
+  });
+
+  test('restoring lands signed out when the stored session cannot be parsed',
+      () async {
+    // Regression: a response missing a field the model requires throws a
+    // TypeError, not an ApiException, which used to skip the status update and
+    // hang the app on the splash screen.
+    final AuthController controller = buildController(
+      mockClient: MockClient(
+        (http.Request request) async => http.Response(
+          jsonEncode(<String, dynamic>{'id': 1}),
+          200,
+        ),
+      ),
+      tokenStore: InMemorySessionTokenStore('stored-token'),
+    );
+
+    await controller.restoreSession();
+
+    expect(controller.status, AuthStatus.signedOut);
+    expect(controller.patient, isNull);
+  });
+
+  test('restoring lands signed out when the request fails unexpectedly',
+      () async {
+    // Regression: only ApiException used to be caught, so a socket error
+    // during restoration left the app checking the stored session forever.
+    final AuthController controller = buildController(
+      mockClient: MockClient((http.Request request) async {
+        throw const SocketException('connection reset');
+      }),
+      tokenStore: InMemorySessionTokenStore('stored-token'),
+    );
+
+    await controller.restoreSession();
+
+    expect(controller.status, AuthStatus.signedOut);
+    expect(controller.patient, isNull);
+  });
+
+  test('restoring recovers when clearing the stored token also fails',
+      () async {
+    // Regression: the token read and the token clear both go through secure
+    // storage, so the thing that failed on the read usually fails on the clear
+    // too. That second throw must not strand the patient on splash.
+    final AuthController controller = buildController(
+      mockClient: MockClient(
+        (http.Request request) async => http.Response(
+          jsonEncode(<String, dynamic>{'detail': 'Authentication required.'}),
+          401,
+        ),
+      ),
+      tokenStore: _FailingSessionTokenStore(),
+    );
+
+    await controller.restoreSession();
+
+    expect(controller.status, AuthStatus.signedOut);
+    expect(controller.patient, isNull);
+  });
+
+  test('restoring never leaves the app in the checking state', () async {
+    // The invariant behind the three tests above: whatever happens, restoration
+    // ends in a state the patient can act on.
+    final List<AuthController> controllers = <AuthController>[
+      buildController(
+        mockClient: MockClient(
+          (http.Request request) async => http.Response(_patientJson, 200),
+        ),
+        tokenStore: _FailingSessionTokenStore(),
+      ),
+      buildController(
+        mockClient: MockClient(
+          (http.Request request) async => http.Response('{}', 200),
+        ),
+        tokenStore: InMemorySessionTokenStore('stored-token'),
+      ),
+      buildController(
+        mockClient: MockClient((http.Request request) async {
+          throw const SocketException('connection reset');
+        }),
+        tokenStore: InMemorySessionTokenStore('stored-token'),
+      ),
+    ];
+
+    for (final AuthController controller in controllers) {
+      await controller.restoreSession();
+      expect(controller.status, isNot(AuthStatus.checking));
+    }
   });
 
   test('signing in stores the session token', () async {
@@ -148,6 +270,23 @@ void main() {
     expect(succeeded, isFalse);
     expect(controller.status, isNot(AuthStatus.signedIn));
     expect(controller.errorMessage, 'Invalid email or password.');
+  });
+
+  test('signing out clears the stored token even if the server call fails',
+      () async {
+    // Signing out must reach signed out locally even when the logout call
+    // fails, which includes failing with something other than an ApiException.
+    final AuthController controller = buildController(
+      mockClient: MockClient((http.Request request) async {
+        throw const SocketException('connection reset');
+      }),
+      tokenStore: InMemorySessionTokenStore('token-1'),
+    );
+
+    await controller.signOut();
+
+    expect(controller.status, AuthStatus.signedOut);
+    expect(controller.patient, isNull);
   });
 
   test('signing out clears the stored token', () async {
