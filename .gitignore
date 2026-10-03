@@ -21,6 +21,9 @@ htmlcov/
 .ruff_cache/
 .mypy_cache/
 
+# Flutter web build output
+apps/doctor_app/web/
+
 # Editors / OS
 .vscode/
 .idea/

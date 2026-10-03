@@ -1,0 +1,117 @@
+name: Flutter CI
+
+# Same triggers as the backend CI so a push is validated the same way for
+# every part of the repository.
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+# Pinned to the SDK the apps are developed against. Both apps share the same
+# constraints, so a single version covers them.
+env:
+  FLUTTER_VERSION: "3.47.5"
+
+jobs:
+  quality:
+    name: Format & Analyze (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [patient_app, doctor_app]
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # The lockfile is committed, so this resolves to exactly the versions
+      # the app was last developed against.
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Run static analysis
+        run: flutter analyze
+
+  test:
+    name: Tests (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [patient_app, doctor_app]
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      # A per-test timeout turns a hung suite into a failure instead of a job
+      # that runs until the workflow limit.
+      - name: Run unit and widget tests
+        run: flutter test --timeout 60s
+
+  build:
+    name: Build (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [patient_app, doctor_app]
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      # Compiles the whole app, including main.dart, which the test suite never
+      # loads. `bundle` needs no Android SDK or Xcode, so this stays fast and
+      # reliable while still catching a broken entry point.
+      - name: Verify the app compiles
+        run: flutter build bundle --debug
+
+      # The doctor app ships as a web portal as well, and the web build runs a
+      # different compiler path, so it is validated separately.
+      - name: Verify the web portal compiles
+        if: matrix.app == 'doctor_app'
+        run: flutter build web --release
