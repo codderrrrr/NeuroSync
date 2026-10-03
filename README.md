@@ -48,6 +48,7 @@ The API will be available at:
 
 Tests run against the database configured by `DATABASE_URL`, so start PostgreSQL
 and apply migrations (`docker compose up -d && uv run alembic upgrade head`) first.
+The Flutter applications have their own suites; see their sections below.
 
 ```bash
 # Run all tests
@@ -102,7 +103,7 @@ src/neurosync/
 ├── config/          # Configuration (settings, logging)
 ├── db/              # Database layer (SQLAlchemy, sessions)
 ├── api/             # App-wide routes (health)
-├── modules/         # Business feature modules (domain, persistence, API, tests)
+├── modules/         # Business feature modules (domain, persistence, API)
 │   ├── auth/            # Patient signup, login, sessions
 │   ├── check_ins/       # Patient-reported symptom check-ins
 │   ├── doctor/          # Doctor portal auth + patient roster
@@ -116,8 +117,8 @@ tests/               # Test suite
   ├── unit/          # Unit tests
   └── integration/   # Integration tests
 apps/
-├── patient_app/     # Flutter patient application
-└── doctor_web/      # Doctor web portal (Vite + React + TypeScript)
+├── patient_app/     # Flutter patient application (mobile)
+└── doctor_app/      # Flutter doctor portal (web + mobile)
 ```
 
 ## Architecture
@@ -125,7 +126,8 @@ apps/
 NeuroSync follows a **modular monolith** architecture:
 
 - Code organized around business capabilities
-- Each module contains domain logic, persistence, API layer, and tests
+- Each module contains domain logic, persistence, and its API layer; tests live
+  in the top-level `tests/` tree, split into `unit/` and `integration/`
 - Clean separation between configuration, database, API, and modules
 - PostgreSQL as the single source of truth
 - Every schema change requires an Alembic migration
@@ -152,12 +154,15 @@ session; no endpoint accepts a patient identifier from the request.
 | `POST` | `/monitoring/sessions/{id}/complete` | Submit raw events and complete a session |
 | `GET` | `/monitoring/sessions` | List the patient's sessions, newest first (`limit` 1-100) |
 | `GET` | `/monitoring/sessions/{id}` | Return one session owned by the patient |
+| `POST` | `/doctor/auth/signup` | Create a doctor account, generate a link code and start a session |
 | `POST` | `/doctor/auth/login` | Sign a doctor in to the portal |
 | `POST` | `/doctor/auth/logout` | Revoke the doctor's portal session (idempotent) |
 | `GET` | `/doctor/auth/me` | Return the authenticated doctor |
 | `GET` | `/doctor/patients` | List the doctor's accepted patients |
 | `GET` | `/doctor/patient-links/pending` | List pending patient requests, longest-waiting first |
 | `POST` | `/doctor/patient-links/{link_id}/accept` | Accept a pending patient request |
+| `GET` | `/doctor/patients/{patient_id}/assignments` | List the exercises this doctor assigned to one patient |
+| `POST` | `/doctor/patients/{patient_id}/assignments` | Assign a finger-tapping exercise (10-600s duration) |
 | `GET` | `/health` | Liveness probe |
 | `GET` | `/health/db` | Database connectivity probe |
 
@@ -182,14 +187,25 @@ longest pause, tapping rate) and a recording quality of `valid`,
 long). These numbers describe the recording only — there is no scoring, no
 comparison against norms, and no clinical interpretation.
 
-Sessions are opaque random tokens and only a SHA-256 digest is stored, so a
-database leak does not expose usable tokens. The raw token is returned in the
-response body for bearer use and is also set as an `HttpOnly` cookie (`Secure`
-only in production) so browser clients work without exposing it to scripts.
-Doctor acceptance is not implemented yet, so links remain `pending`.
+A monitoring session is an ordinary row in `monitoring_sessions`, identified by
+its integer id and scoped to the patient who owns it — it carries no token of
+its own. Authentication sessions are the opaque ones: their random token is
+returned in the response body for bearer use and is also set as an `HttpOnly`
+cookie (`Secure` only in production) so browser clients work without exposing
+it to scripts, and only a SHA-256 digest of it is stored, so a database leak
+does not expose usable tokens.
+
+A doctor assigns a recording length per exercise. `MonitoringPlanItem.duration_seconds`
+holds that override; when it is null the assessment's catalog default is used.
+That resolved duration is both what the patient app is shown and what the
+quality of the returned recording is judged against, so a compliant recording
+is never marked `invalid` for running past the catalog default. The patient app
+always shows the newest active plan, so the latest assignment is the one a
+patient sees.
 
 The Flutter patient application lives in `apps/patient_app` — see its
-`README.md` for setup and run instructions.
+`README.md` for setup and run instructions. Checks: `flutter analyze`,
+`dart format --output=none --set-exit-if-changed lib test` and `flutter test`.
 
 ### Development doctor
 
@@ -216,33 +232,53 @@ uv run python -m neurosync.scripts.seed_monitoring patient@example.com
 The script is idempotent (a patient with an active plan is skipped) and refuses
 to run when `ENVIRONMENT=production`.
 
-## Doctor Web Portal
+## Doctor Portal
 
-The doctor-facing web client lives in `apps/doctor_web` (Vite + React + Type
-Script; no other runtime dependencies). It is a desktop clinical workspace:
-login → dashboard → patient detail.
+The doctor-facing client is a Flutter application in `apps/doctor_app`, sharing
+the backend with the patient app. It runs as a **web portal** on desktop and as
+a mobile app on Android and iOS from the same codebase.
 
 ```bash
-# Provision the demo scenario (doctor + code + patient + pending link)
-uv run python -m neurosync.scripts.seed_doctor_portal
-
 # Run the backend
 uv run uvicorn neurosync.main:app --reload --port 8000
 
-# Run the portal (proxies /api to localhost:8000)
-cd apps/doctor_web && npm install && npm run dev
+# As a web portal
+cd apps/doctor_app
+flutter run -d chrome --dart-define=NEUROSYNC_API_BASE_URL=http://127.0.0.1:8000
+
+# As a mobile app (a phone cannot reach `localhost`)
+flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://<your-lan-ip>:8000
+```
+
+The portal adapts by width rather than shrinking: a fixed sidebar at 900px and
+above, a compact icon bar below it, and a roster that is a table at 720px and
+above and a list below that.
+
+Checks: `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`,
+`flutter test` and `flutter build web --release` inside `apps/doctor_app`.
+
+To provision the demo scenario locally (doctor + link code + patient + pending
+link request):
+
+```bash
+uv run python -m neurosync.scripts.seed_doctor_portal
 ```
 
 The seeded doctor signs in with `doctor@example.com` / `portal-dev-password`
-(development only).
+(development only). A doctor who signs up in the app gets a generated link code
+immediately; patients type that code in the patient app to request a link.
 
-What the first doctor slice implements:
+What the doctor slice implements:
 
 - **Doctor authentication** at `/doctor/auth/*` with the same security
   principles as patient auth: scrypt password hashes only, opaque session
   tokens persisted as SHA-256 digests, 7-day expiry, revocable sessions, and
   a separate `doctor_sessions` table plus a separate session cookie, so a
   patient token can never authenticate a doctor endpoint and vice versa.
+- **Link codes.** Signup generates a unique 7-character code from an alphabet
+  with no ambiguous characters (`I`/`L`/`O`/`0`/`1`), like a classroom join
+  code. The doctor's profile sheet is the only place it is shown, with a
+  copy-to-clipboard action.
 - **Pending patient requests.** When a patient links with a doctor code, the
   request stays `pending`. The doctor sees it under *Pending requests* with
   the patient identity and request date.
@@ -250,22 +286,20 @@ What the first doctor slice implements:
   `accepted_at`. Accepting is idempotent; another doctor's request (or an
   unknown link) returns `404`, indistinguishable from a missing link.
 - **Active patient roster.** Accepted patients appear with their link status
-  and acceptance date. Clicking one opens a basic patient detail page with
-  explicit *Coming in the next phase* sections for monitoring, check-ins and
-  assessments — no clinical data is shown or fabricated.
+  and acceptance date.
+- **Assign an exercise.** A doctor opens a linked patient and assigns a
+  finger-tapping exercise with a recording length of their choosing (10-600
+  seconds). This creates an active monitoring plan owned by that doctor, which
+  the patient sees on their next check-in.
 
 Scope notes:
 
 - Doctor linking controls the care-team relationship only.
-- Monitoring plans remain independent of doctor linking in the current
-  patient MVP; the plan's `doctor_id` column is reserved for later use.
-- Doctor plan creation is **not** implemented yet. Monitoring-plan creation,
-  assessment assignment and review of monitoring results arrive in later
-  doctor workflow slices.
-- The Flutter patient application is unchanged by this slice.
-
-Portal checks: `npm run build`, `npm run lint`, `npm test` (Vitest +
-Testing Library) inside `apps/doctor_web`.
+- Only assessments with a runner (`finger_tapping`) can be assigned; anything
+  else returns `409 Conflict`.
+- Reviewing monitoring results and check-ins in the doctor app is **not**
+  implemented yet; the patient detail screen says so explicitly rather than
+  showing placeholder data.
 
 ## Environment Variables
 
@@ -280,7 +314,7 @@ Testing Library) inside `apps/doctor_web`.
 | `DATABASE_URL` | PostgreSQL connection URL | `postgresql+asyncpg://neurosync:neurosync@localhost:5432/neurosync` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 | `LOG_FORMAT` | Log format (json/console) | `json` |
-| `CORS_ORIGINS` | Allowed CORS origins | `["http://localhost:3000"]` |
+| `CORS_ORIGINS` | Allowed CORS origins | `["http://localhost"]` |
 
 ## Clinical Safety
 
