@@ -63,13 +63,4 @@ class RosterController extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  /// Marks the roster stale after a sign-out or account switch.
-  void clear() {
-    _pending = const <PendingRequest>[];
-    _patients = const <RosterPatient>[];
-    _hasLoaded = false;
-    _errorMessage = null;
-    notifyListeners();
-  }
 }

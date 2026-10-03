@@ -24,6 +24,6 @@ class RosterRepository {
         .toList(growable: false);
   }
 
-  Future<void> accept(int linkId) =>
-      _apiClient.postObject('/doctor/patient-links/$linkId/accept', <String, dynamic>{});
+  Future<void> accept(int linkId) => _apiClient
+      .postObject('/doctor/patient-links/$linkId/accept', <String, dynamic>{});
 }

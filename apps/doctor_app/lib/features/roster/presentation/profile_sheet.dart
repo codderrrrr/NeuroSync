@@ -161,7 +161,8 @@ class _CodeCard extends StatelessWidget {
                       );
                     }
                   },
-                  icon: const Icon(Icons.copy_rounded, color: AppTheme.accentMint),
+                  icon: const Icon(Icons.copy_rounded,
+                      color: AppTheme.accentMint),
                 ),
               ],
             ),

@@ -6,10 +6,10 @@ import 'package:http/http.dart' as http;
 import 'package:neurosync_doctor/features/auth/presentation/signup_screen.dart';
 import 'package:neurosync_doctor/features/auth/state/auth_controller.dart';
 
-import '../../test_support.dart';
+import '../../../test_support.dart';
 
 void main() {
-  Future<void> pumpSignup(WidgetTester tester,
+  Future<AuthController> pumpSignup(WidgetTester tester,
       Future<http.Response> Function(http.Request) handler) {
     return pumpDoctorScreen(
       tester,
@@ -48,7 +48,8 @@ void main() {
     await tester.enterText(find.byType(TextFormField).at(0), 'Dr. Amara Osei');
     await tester.enterText(
         find.byType(TextFormField).at(1), 'amara@clinic.example.com');
-    await tester.enterText(find.byType(TextFormField).at(2), 'a-very-long-password');
+    await tester.enterText(
+        find.byType(TextFormField).at(2), 'a-very-long-password');
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
 
@@ -68,7 +69,9 @@ void main() {
     await pumpSignup(
       tester,
       (http.Request request) async => json(
-        <String, dynamic>{'detail': 'An account with this email already exists.'},
+        <String, dynamic>{
+          'detail': 'An account with this email already exists.'
+        },
         409,
       ),
     );
@@ -76,7 +79,8 @@ void main() {
     await tester.enterText(find.byType(TextFormField).at(0), 'Dr. Amara Osei');
     await tester.enterText(
         find.byType(TextFormField).at(1), 'amara@clinic.example.com');
-    await tester.enterText(find.byType(TextFormField).at(2), 'a-very-long-password');
+    await tester.enterText(
+        find.byType(TextFormField).at(2), 'a-very-long-password');
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
 

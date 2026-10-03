@@ -15,22 +15,44 @@ import '../../test_support.dart';
 AuthController buildController(
   Future<http.Response> Function(http.Request) handler, {
   String? storedToken,
-}) {
-  final InMemorySessionTokenStore tokenStore = InMemorySessionTokenStore();
-  if (storedToken != null) {
-    tokenStore.write(storedToken);
-  }
+}) =>
+    controllerWithStore(InMemorySessionTokenStore(storedToken), handler);
+
+/// Builds an [AuthController] around an explicit [SessionTokenStore].
+///
+/// The API client and the controller must share one [SessionTokenCache], as
+/// `main.dart` does: the controller writes the token into the cache and the
+/// client reads it back to build the Authorization header. Two caches would
+/// silently drop the Authorization header instead of failing loudly.
+AuthController controllerWithStore(
+  SessionTokenStore tokenStore,
+  Future<http.Response> Function(http.Request) handler,
+) {
+  final SessionTokenCache tokenCache = SessionTokenCache();
   return AuthController(
     repository: AuthRepository(
       apiClient: ApiClient(
         baseUrl: 'http://api.test',
         httpClient: MockClient(handler),
-        sessionToken: SessionTokenCache(),
+        sessionToken: tokenCache,
       ),
     ),
     tokenStore: tokenStore,
-    tokenCache: SessionTokenCache(),
+    tokenCache: tokenCache,
   );
+}
+
+/// A store that fails the way a platform keystore can: reading throws instead
+/// of returning a token.
+class _FailingSessionTokenStore implements SessionTokenStore {
+  @override
+  Future<String?> read() async => throw StateError('keystore unavailable');
+
+  @override
+  Future<void> write(String token) async {}
+
+  @override
+  Future<void> clear() async {}
 }
 
 void main() {
@@ -101,8 +123,8 @@ void main() {
 
     test('shows the rejection message on bad credentials', () async {
       final AuthController controller = buildController(
-        (http.Request request) async =>
-            json(<String, dynamic>{'detail': 'Invalid email or password.'}, 401),
+        (http.Request request) async => json(
+            <String, dynamic>{'detail': 'Invalid email or password.'}, 401),
       );
 
       final bool ok = await controller.signIn(
@@ -144,19 +166,12 @@ void main() {
     });
 
     test('clears an expired or revoked token', () async {
-      final InMemorySessionTokenStore tokenStore = InMemorySessionTokenStore();
-      await tokenStore.write('stale-token');
-      final AuthController controller = AuthController(
-        repository: AuthRepository(
-          apiClient: ApiClient(
-            baseUrl: 'http://api.test',
-            httpClient: MockClient((http.Request request) async =>
-                json(<String, dynamic>{'detail': 'Not authenticated.'}, 401)),
-            sessionToken: SessionTokenCache(),
-          ),
-        ),
-        tokenStore: tokenStore,
-        tokenCache: SessionTokenCache(),
+      final InMemorySessionTokenStore tokenStore =
+          InMemorySessionTokenStore('stale-token');
+      final AuthController controller = controllerWithStore(
+        tokenStore,
+        (http.Request request) async =>
+            json(<String, dynamic>{'detail': 'Not authenticated.'}, 401),
       );
 
       await controller.restoreSession();
@@ -164,25 +179,47 @@ void main() {
       expect(controller.status, AuthStatus.signedOut);
       expect(await tokenStore.read(), isNull);
     });
+
+    test('lands signed out when secure storage cannot be read', () async {
+      // Regression: only ApiException used to be caught, so a keystore read
+      // failure escaped restoreSession with the status still `checking`.
+      // _RootView renders `checking` as the splash screen, so the app was
+      // stuck on splash forever with no way to sign in.
+      final AuthController controller = controllerWithStore(
+        _FailingSessionTokenStore(),
+        (http.Request request) async => json(doctorJson()),
+      );
+
+      await controller.restoreSession();
+
+      expect(controller.status, AuthStatus.signedOut);
+      expect(controller.doctor, isNull);
+    });
+
+    test('lands signed out when the stored session cannot be parsed', () async {
+      // Regression: a response missing a field the model requires throws a
+      // TypeError, not an ApiException, which used to skip the status update
+      // and hang the app on the splash screen.
+      final AuthController controller = controllerWithStore(
+        InMemorySessionTokenStore('stored-token'),
+        (http.Request request) async => json(<String, dynamic>{'id': 3}),
+      );
+
+      await controller.restoreSession();
+
+      expect(controller.status, AuthStatus.signedOut);
+      expect(controller.doctor, isNull);
+    });
   });
 
   group('signOut', () {
     test('clears the local session even if the server call fails', () async {
-      final InMemorySessionTokenStore tokenStore = InMemorySessionTokenStore();
-      final AuthController controller = AuthController(
-        repository: AuthRepository(
-          apiClient: ApiClient(
-            baseUrl: 'http://api.test',
-            httpClient: MockClient(
-              (http.Request request) async => json(<String, dynamic>{}, 500),
-            ),
-            sessionToken: SessionTokenCache(),
-          ),
-        ),
-        tokenStore: tokenStore,
-        tokenCache: SessionTokenCache(),
+      final InMemorySessionTokenStore tokenStore =
+          InMemorySessionTokenStore('active-token');
+      final AuthController controller = controllerWithStore(
+        tokenStore,
+        (http.Request request) async => json(<String, dynamic>{}, 500),
       );
-      await tokenStore.write('active-token');
 
       await controller.signOut();
 

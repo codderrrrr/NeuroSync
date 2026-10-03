@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:neurosync_doctor/features/auth/presentation/login_screen.dart';
 import 'package:neurosync_doctor/features/auth/presentation/signup_screen.dart';
 
-import '../../test_support.dart';
+import '../../../test_support.dart';
 
 void main() {
   testWidgets('asks for credentials when the form is submitted empty',
@@ -35,7 +35,8 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'amara@clinic.example.com');
+    await tester.enterText(
+        find.byType(TextFormField).at(0), 'amara@clinic.example.com');
     await tester.enterText(find.byType(TextFormField).at(1), 'wrong-password');
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();

@@ -7,6 +7,8 @@ import 'core/network/api_client.dart';
 import 'core/storage/session_token_store.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/state/auth_controller.dart';
+import 'features/exceptions/data/exception_repository.dart';
+import 'features/exceptions/state/exception_controller.dart';
 import 'features/patients/data/assignment_repository.dart';
 import 'features/patients/state/assignment_controller.dart';
 import 'features/roster/data/roster_repository.dart';
@@ -42,6 +44,10 @@ void main() {
     repository: AssignmentRepository(apiClient: apiClient),
   );
 
+  final ExceptionController exceptionController = ExceptionController(
+    repository: ExceptionRepository(apiClient: apiClient),
+  );
+
   authController.restoreSession();
 
   runApp(
@@ -49,6 +55,7 @@ void main() {
       authController: authController,
       rosterController: rosterController,
       assignmentController: assignmentController,
+      exceptionController: exceptionController,
     ),
   );
 }

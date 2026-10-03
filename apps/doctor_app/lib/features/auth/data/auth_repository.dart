@@ -33,7 +33,8 @@ class AuthRepository {
   }
 
   Future<Doctor> currentDoctor() async {
-    final Map<String, dynamic> body = await _apiClient.getObject('/doctor/auth/me');
+    final Map<String, dynamic> body =
+        await _apiClient.getObject('/doctor/auth/me');
     return Doctor.fromJson(body);
   }
 

@@ -32,8 +32,7 @@ class PrimaryButton extends StatelessWidget {
           backgroundColor: enabled
               ? scheme.primary
               : scheme.onSurface.withValues(alpha: 0.07),
-          foregroundColor:
-              enabled ? scheme.onPrimary : scheme.onSurfaceVariant,
+          foregroundColor: enabled ? scheme.onPrimary : scheme.onSurfaceVariant,
           overlayColor: const Color(0x1F000000),
           padding: const EdgeInsets.symmetric(horizontal: 20),
           shape: RoundedRectangleBorder(
