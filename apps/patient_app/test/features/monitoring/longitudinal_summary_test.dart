@@ -47,14 +47,19 @@ Map<String, dynamic> longitudinalJson({
   };
 }
 
+/// Shaped exactly as the API returns it: one block, for the runner that
+/// captured the session.
 Map<String, dynamic> resultJson(String quality) => <String, dynamic>{
-      'total_taps': 42,
-      'duration_ms': 30000,
-      'mean_inter_tap_interval_ms': 700,
-      'inter_tap_variability_ms': 90,
-      'longest_pause_ms': 2100,
-      'taps_per_second': 1.4,
       'quality': quality,
+      'taps': <String, dynamic>{
+        'total_taps': 42,
+        'duration_ms': 30000,
+        'mean_inter_tap_interval_ms': 700,
+        'inter_tap_variability_ms': 90,
+        'longest_pause_ms': 2100,
+        'taps_per_second': 1.4,
+      },
+      'canvas': null,
     };
 
 Map<String, dynamic> sessionJson({
@@ -83,13 +88,15 @@ Map<String, dynamic> sessionJson({
 }
 
 SessionResult sampleResult() => SessionResult(
-      totalTaps: 42,
-      durationMs: 30000,
-      meanInterTapIntervalMs: 700,
-      interTapVariabilityMs: 90,
-      longestPauseMs: 2100,
-      tapsPerSecond: 1.4,
       quality: RecordingQuality.valid,
+      taps: const TapResult(
+        totalTaps: 42,
+        durationMs: 30000,
+        meanInterTapIntervalMs: 700,
+        interTapVariabilityMs: 90,
+        longestPauseMs: 2100,
+        tapsPerSecond: 1.4,
+      ),
     );
 
 Future<void> pumpResult(

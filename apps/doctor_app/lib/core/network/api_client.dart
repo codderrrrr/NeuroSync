@@ -55,6 +55,20 @@ class ApiClient {
     _ensureSuccess(response);
   }
 
+  /// Sends a partial update. Used for editing an exercise already assigned.
+  Future<Map<String, dynamic>> patchObject(
+      String path, Map<String, dynamic> body) async {
+    final response = await _send(() => _sendWith('PATCH', path, body));
+    return _decodeObject(response);
+  }
+
+  /// Removes something. The API answers 204, so there is nothing to decode.
+  Future<void> delete(String path) async {
+    final response =
+        await _send(() => _httpClient.delete(_uri(path), headers: _headers()));
+    _ensureSuccess(response);
+  }
+
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
   Map<String, String> _headers() {
@@ -68,17 +82,26 @@ class ApiClient {
     return headers;
   }
 
-  Future<http.Response> _post(String path, Map<String, dynamic>? body) {
+  Future<http.Response> _sendWith(
+    String method,
+    String path,
+    Map<String, dynamic>? body,
+  ) {
     final Map<String, String> headers = _headers();
     if (body != null) {
       headers['Content-Type'] = 'application/json';
     }
-    return _httpClient.post(
-      _uri(path),
-      headers: headers,
-      body: body == null ? null : jsonEncode(body),
-    );
+    final Uri uri = _uri(path);
+    return switch (method) {
+      'PATCH' => _httpClient.patch(uri,
+          headers: headers, body: body == null ? null : jsonEncode(body)),
+      _ => _httpClient.post(uri,
+          headers: headers, body: body == null ? null : jsonEncode(body)),
+    };
   }
+
+  Future<http.Response> _post(String path, Map<String, dynamic>? body) =>
+      _sendWith('POST', path, body);
 
   Future<http.Response> _send(Future<http.Response> Function() request) async {
     try {

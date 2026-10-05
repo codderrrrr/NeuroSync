@@ -12,15 +12,66 @@ from neurosync.modules.medication.models import (
     EvidenceStrength,
     MedicationContext,
 )
+from neurosync.modules.monitoring.assessment_catalog import (
+    AssessmentSpec,
+    ParameterKind,
+    ParameterSpec,
+)
+from neurosync.modules.monitoring.canvas_features import CanvasPoint
 from neurosync.modules.monitoring.models import LongitudinalState, RecordingQuality
 
-# A 30-second task cannot plausibly produce ten thousand taps; the cap keeps a
-# broken client from flooding the events table while never rejecting honest
-# recordings.
-MAX_TAP_EVENTS = 2_000
+# A 30-second task cannot plausibly produce ten thousand taps, and a 60 Hz
+# canvas sample rate produces about 1,800 points in the same time; the cap
+# keeps a broken client from flooding the events table while never rejecting
+# honest recordings.
+MAX_SESSION_EVENTS = 6_000
 EVENT_TYPE_TAP = "tap"
+EVENT_TYPE_STROKE_START = "stroke_start"
+EVENT_TYPE_STROKE_POINT = "stroke_point"
+EVENT_TYPE_STROKE_END = "stroke_end"
 
-EVENT_TYPE_DESCRIPTION = "Event type; only 'tap' events are accepted in this milestone."
+TAP_EVENT_TYPES: frozenset[str] = frozenset({EVENT_TYPE_TAP})
+CANVAS_EVENT_TYPES: frozenset[str] = frozenset(
+    {EVENT_TYPE_STROKE_START, EVENT_TYPE_STROKE_POINT, EVENT_TYPE_STROKE_END}
+)
+
+EVENT_TYPE_DESCRIPTION = (
+    "Event type: 'tap' for finger tapping, or 'stroke_start', 'stroke_point' "
+    "and 'stroke_end' for a canvas recording."
+)
+
+
+class ParameterSpecResponse(BaseModel):
+    """One doctor-settable value, described so a client can edit it."""
+
+    key: str
+    label: str
+    kind: ParameterKind
+    default: int | str
+    minimum: int | None = None
+    maximum: int | None = None
+    choices: list[str] = Field(default_factory=list)
+    max_length: int | None = None
+    help_text: str = ""
+
+    @classmethod
+    def from_spec(cls, spec: ParameterSpec) -> "ParameterSpecResponse":
+        return cls(
+            key=spec.key,
+            label=spec.label,
+            kind=spec.kind,
+            default=spec.default,
+            minimum=spec.minimum,
+            maximum=spec.maximum,
+            choices=list(spec.choices),
+            max_length=spec.max_length,
+            help_text=spec.help_text,
+        )
+
+
+def parameter_responses(spec: AssessmentSpec) -> list[ParameterSpecResponse]:
+    """Render every parameter an assessment lets a doctor set."""
+    return [ParameterSpecResponse.from_spec(parameter) for parameter in spec.parameters]
 
 
 class AssessmentResponse(BaseModel):
@@ -36,6 +87,10 @@ class AssessmentResponse(BaseModel):
     execution_type: str
     default_duration_seconds: int
     is_supported: bool
+    # What a doctor may change about this test, and what it defaults to. The
+    # patient app renders the values its plan item carries; the doctor app
+    # renders an editor from these specs.
+    parameters: list[ParameterSpecResponse] = Field(default_factory=list)
 
 
 class PlanItemResponse(BaseModel):
@@ -55,6 +110,10 @@ class PlanItemResponse(BaseModel):
     # when present, otherwise the assessment's catalog default.
     duration_seconds: int
 
+    # Every parameter this item uses, resolved against the catalog so the
+    # client never has to work out which ones the doctor left at their default.
+    parameters: dict[str, int | str] = Field(default_factory=dict)
+
 
 class MonitoringPlanResponse(BaseModel):
     """The patient's active monitoring plan with its ordered items."""
@@ -72,18 +131,36 @@ class StartSessionRequest(BaseModel):
 
 
 class TapEventRequest(BaseModel):
-    """One raw tap as the client recorded it."""
+    """One raw movement event as the client recorded it.
+
+    One shape covers both runners. A tap carries no payload; a canvas point
+    carries the ``x``/``y`` the client sampled, in whatever unit it renders.
+    """
 
     event_type: str = Field(description=EVENT_TYPE_DESCRIPTION)
     offset_ms: int = Field(ge=0, description="Milliseconds into the session")
     payload: dict | None = Field(default=None, description="Optional raw client metadata")
+
+    def point(self) -> CanvasPoint:
+        """Return this event as a sampled canvas point.
+
+        Raises ``ValueError`` when the payload is not a usable coordinate, so a
+        client cannot smuggle a malformed point past the boundary.
+        """
+        payload = self.payload or {}
+        try:
+            x = float(payload["x"])  # type: ignore[arg-type]
+            y = float(payload["y"])  # type: ignore[arg-type]
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(MissingCanvasCoordinateMessage.MESSAGE) from exc
+        return CanvasPoint(offset_ms=self.offset_ms, x=x, y=y)
 
 
 class CompleteSessionRequest(BaseModel):
     """The raw event stream captured during one session."""
 
     events: list[TapEventRequest] = Field(
-        max_length=MAX_TAP_EVENTS,
+        max_length=MAX_SESSION_EVENTS,
         description="Raw events in the order the client captured them",
     )
 
@@ -96,8 +173,8 @@ class CompleteSessionRequest(BaseModel):
     )
 
 
-class SessionResultResponse(BaseModel):
-    """Deterministic summary of one recording; describes the session only."""
+class TapResultResponse(BaseModel):
+    """Deterministic summary of one finger-tapping recording."""
 
     total_taps: int
     duration_ms: int
@@ -105,7 +182,36 @@ class SessionResultResponse(BaseModel):
     inter_tap_variability_ms: int
     longest_pause_ms: int
     taps_per_second: float
+
+
+class CanvasResultResponse(BaseModel):
+    """Deterministic summary of one canvas (tracing) recording.
+
+    Describes the recording only. Path length and speed are in the client's own
+    coordinate unit, which is what makes a patient's sessions comparable with
+    each other on their own device and with nothing else.
+    """
+
+    total_points: int
+    stroke_count: int
+    duration_ms: int
+    longest_pause_ms: int
+    path_length: float
+    mean_speed_px_per_second: float
+    peak_speed_px_per_second: float
+    path_efficiency: float
+
+
+class SessionResultResponse(BaseModel):
+    """Deterministic summary of one recording, in the shape its runner needs.
+
+    Exactly one block is present, so a client reads the one its assessment
+    produces instead of guessing from which fields happen to be set.
+    """
+
     quality: RecordingQuality
+    taps: TapResultResponse | None = None
+    canvas: CanvasResultResponse | None = None
 
 
 class LongitudinalSummaryResponse(BaseModel):
@@ -188,11 +294,62 @@ class UnsupportedEventTypeMessage:
         return f"Unsupported event type: {event_type!r}"
 
 
+class MissingCanvasCoordinateMessage:
+    """Message for a canvas event whose payload has no usable coordinate."""
+
+    MESSAGE = "Canvas events must carry numeric 'x' and 'y' values."
+
+
+class StrokeOrderMessage:
+    """Messages for a canvas stream whose strokes do not nest correctly."""
+
+    POINT_OUTSIDE_STROKE = "A stroke point arrived outside a stroke."
+    START_INSIDE_STROKE = "A stroke started before the previous one ended."
+    END_OUTSIDE_STROKE = "A stroke ended without being started."
+    UNCLOSED_STROKE = "The recording ended while a stroke was still open."
+
+
 def event_offsets_ms(events: list[TapEventRequest]) -> list[int]:
     """Return the offsets of tap events, validating the event type."""
     offsets: list[int] = []
     for event in events:
-        if event.event_type != EVENT_TYPE_TAP:
+        if event.event_type not in TAP_EVENT_TYPES:
             raise ValueError(UnsupportedEventTypeMessage.for_type(event.event_type))
         offsets.append(event.offset_ms)
     return offsets
+
+
+def canvas_strokes(events: list[TapEventRequest]) -> list[list[CanvasPoint]]:
+    """Return the strokes in a canvas recording, validating the stream shape.
+
+    Strokes must nest: a start opens one, points extend it, and an end closes
+    it. A stream that violates that is rejected rather than repaired, because
+    guessing where one movement ended and the next began would change the
+    stroke count that the recording's quality depends on.
+    """
+    strokes: list[list[CanvasPoint]] = []
+    current: list[CanvasPoint] = []
+
+    for event in events:
+        if event.event_type not in CANVAS_EVENT_TYPES:
+            raise ValueError(UnsupportedEventTypeMessage.for_type(event.event_type))
+        point = event.point()
+
+        if event.event_type == EVENT_TYPE_STROKE_START:
+            if current:
+                raise ValueError(StrokeOrderMessage.START_INSIDE_STROKE)
+            current = [point]
+        elif event.event_type == EVENT_TYPE_STROKE_POINT:
+            if not current:
+                raise ValueError(StrokeOrderMessage.POINT_OUTSIDE_STROKE)
+            current.append(point)
+        else:
+            if not current:
+                raise ValueError(StrokeOrderMessage.END_OUTSIDE_STROKE)
+            current.append(point)
+            strokes.append(current)
+            current = []
+
+    if current:
+        raise ValueError(StrokeOrderMessage.UNCLOSED_STROKE)
+    return strokes

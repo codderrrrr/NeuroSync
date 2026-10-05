@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app_scope.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_texts.dart';
 import '../state/doctor_link_controller.dart';
@@ -47,27 +48,35 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         child: ListenableBuilder(
           listenable: links,
           builder: (BuildContext context, Widget? child) {
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
-              children: <Widget>[
-                const LargeTitle('Care team'),
-                const SizedBox(height: 6),
-                const MutedText(
-                  'Link a doctor with the code they gave you so they can follow '
-                  'your check-ins.',
-                ),
-                const SizedBox(height: 28),
-                if (links.errorMessage != null) ...<Widget>[
-                  ErrorText(links.errorMessage!),
-                  const SizedBox(height: 12),
+            // A doctor accepting a request changes this list from their side,
+            // so the patient can pull to check without restarting the app.
+            return RefreshIndicator(
+              onRefresh: links.load,
+              color: AppTheme.accentMint,
+              backgroundColor: AppTheme.darkSurface,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
+                children: <Widget>[
+                  const LargeTitle('Care team'),
+                  const SizedBox(height: 6),
+                  const MutedText(
+                    'Link a doctor with the code they gave you so they can '
+                    'follow your check-ins.',
+                  ),
+                  const SizedBox(height: 28),
+                  if (links.errorMessage != null) ...<Widget>[
+                    ErrorText(links.errorMessage!),
+                    const SizedBox(height: 12),
+                  ],
+                  DoctorLinkList(controller: links),
+                  const SizedBox(height: 24),
+                  PrimaryButton(
+                    label: 'Add your doctor',
+                    onPressed: _openAddDoctor,
+                  ),
                 ],
-                DoctorLinkList(controller: links),
-                const SizedBox(height: 24),
-                PrimaryButton(
-                  label: 'Add your doctor',
-                  onPressed: _openAddDoctor,
-                ),
-              ],
+              ),
             );
           },
         ),

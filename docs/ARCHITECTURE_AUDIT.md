@@ -283,6 +283,19 @@ There is **no** table for medications, medication events, baselines, trends, exc
 
 Migration 0004 seeds four assessments. Only one is usable.
 
+> **Superseded by migration `0010`.** At the time of this audit only `finger_tapping`
+> had a runner. All four are now supported: the three canvas assessments have a
+> client runner, and the catalog also declares the settings a doctor may change
+> per test. The `is_supported` flag and the RESTRICT constraint are unchanged and
+> still guard a catalog entry with no runner.
+>
+> **Partly reversed by migration `0011`.** `spiral_drawing` and `handwriting`
+> kept their runners but are held back until their guides are good enough to put
+> in front of a patient, so `is_supported` is false for them again. Held back is
+> not hidden: they stay in the catalog and in the doctor's list, and the flag now
+> covers both reasons a test can be unavailable — no runner yet, or deliberately
+> paused.
+
 | slug | execution type | default duration | supported |
 | --- | --- | --- | --- |
 | `finger_tapping` | `tap_task` | 30 s | **yes** |

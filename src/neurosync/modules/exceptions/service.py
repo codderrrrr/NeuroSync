@@ -38,9 +38,11 @@ from neurosync.modules.monitoring.models import (
     AssessmentDefinition,
     LongitudinalResult,
     LongitudinalState,
+    MissingResultShapeError,
     MonitoringResult,
     MonitoringSession,
     PatientBaseline,
+    tap_recording_features,
 )
 
 DEFAULT_LIST_LIMIT = 50
@@ -62,6 +64,16 @@ class ReviewAlreadyClosedError(Exception):
 
 class UnreviewableStatusError(Exception):
     """Raised when a caller tries to close an exception with an arrival state."""
+
+
+class NonTapRecordingError(Exception):
+    """Raised when an exception's recording is not a finger-tapping one.
+
+    Cannot happen through the API: an exception is only routed from a
+    longitudinal result, and only a finger-tapping recording produces one. It is
+    here so a corrupted row fails loudly rather than reaching a reviewer as a
+    screen full of missing numbers.
+    """
 
 
 async def _linked_patient_ids(session: AsyncSession, *, doctor_id: int) -> set[int]:
@@ -286,8 +298,17 @@ def _detail(
     recording: MonitoringResult,
     baseline: PatientBaseline | None,
 ) -> ExceptionDetail:
-    """One exception plus the recording and reference behind it."""
+    """One exception plus the recording and reference behind it.
+
+    The evidence this review screen shows is finger-tapping evidence, because an
+    exception can only be routed from a longitudinal result, and only a
+    finger-tapping recording produces one.
+    """
     result = exception.longitudinal_result
+    try:
+        taps = tap_recording_features(recording)
+    except MissingResultShapeError as exc:
+        raise NonTapRecordingError from exc
     return ExceptionDetail(
         summary=_summary(exception, patient_name=patient_name, assessment_title=assessment_title),
         routing_rule=exception.routing_rule,
@@ -298,12 +319,12 @@ def _detail(
         baseline_confidence=result.baseline_confidence,
         changed_features=tuple(result.changed_features or ()),
         recording_quality=recording.quality,
-        total_taps=recording.total_taps,
-        duration_ms=recording.duration_ms,
-        taps_per_second=recording.taps_per_second,
-        mean_inter_tap_interval_ms=recording.mean_inter_tap_interval_ms,
-        inter_tap_variability_ms=recording.inter_tap_variability_ms,
-        longest_pause_ms=recording.longest_pause_ms,
+        total_taps=taps.total_taps,
+        duration_ms=taps.duration_ms,
+        taps_per_second=taps.taps_per_second,
+        mean_inter_tap_interval_ms=taps.mean_inter_tap_interval_ms,
+        inter_tap_variability_ms=taps.inter_tap_variability_ms,
+        longest_pause_ms=taps.longest_pause_ms,
         baseline=_baseline_facts(baseline),
         reviewed_by_doctor_id=exception.reviewed_by_doctor_id,
         reviewed_at=exception.reviewed_at,

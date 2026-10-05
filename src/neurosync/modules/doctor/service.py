@@ -24,6 +24,7 @@ from neurosync.modules.auth.security import (
     verify_password,
 )
 from neurosync.modules.doctor.models import DoctorSession
+from neurosync.modules.doctor.schemas import validated_assignment_parameters
 from neurosync.modules.doctor_linking.models import DoctorCode, DoctorLink, DoctorLinkStatus
 from neurosync.modules.monitoring import service as monitoring_service
 from neurosync.modules.monitoring.models import (
@@ -420,12 +421,19 @@ class AssignmentSummary:
     title: str
     status: str
     created_at: datetime
+    updated_at: datetime
+    assessment_slug: str
     assessment_title: str
     duration_seconds: int
+    parameters: dict[str, int | str]
 
 
 class PatientNotLinkedError(DoctorLinkError):
     """Raised when a patient is not on the doctor's active roster."""
+
+
+class AssignmentNotFoundError(DoctorLinkError):
+    """Raised when an exercise does not exist for this doctor and patient."""
 
 
 async def _active_link_id(
@@ -443,6 +451,24 @@ async def _active_link_id(
     )
 
 
+def _summary(
+    plan: MonitoringPlan,
+    item: MonitoringPlanItem,
+    definition: AssessmentDefinition,
+) -> AssignmentSummary:
+    return AssignmentSummary(
+        plan_id=plan.id,
+        title=plan.title,
+        status=plan.status,
+        created_at=plan.created_at,
+        updated_at=plan.updated_at,
+        assessment_slug=definition.slug,
+        assessment_title=definition.title,
+        duration_seconds=monitoring_service.resolve_item_duration_seconds(item, definition),
+        parameters=monitoring_service.resolve_item_parameters(item, definition),
+    )
+
+
 async def create_assignment(  # noqa: PLR0913 - explicit arguments beat a config object
     *,
     session: AsyncSession,
@@ -451,13 +477,16 @@ async def create_assignment(  # noqa: PLR0913 - explicit arguments beat a config
     title: str | None,
     assessment_slug: str,
     duration_seconds: int,
+    parameters: dict[str, int | str] | None = None,
 ) -> AssignmentSummary:
     """Assign one supported assessment to a linked patient.
 
     The assignment is an active monitoring plan owned by this doctor; the
     patient app always shows the newest active plan, so the latest assignment
-    is the one the patient sees. Only assessments with a runner can be
-    assigned, and the patient must be on the doctor's active roster.
+    is the one the patient sees. Only assessments that are being handed out
+    can be assigned, and the patient must be on the doctor's active roster.
+    ``parameters`` is the rest of what the patient is asked to do, already
+    validated against the assessment's catalog specs at the API boundary.
     """
     if await _active_link_id(session, doctor_id=doctor_id, patient_id=patient_id) is None:
         raise PatientNotLinkedError
@@ -479,15 +508,161 @@ async def create_assignment(  # noqa: PLR0913 - explicit arguments beat a config
         doctor_id=doctor_id,
         status=PlanStatus.ACTIVE,
         duration_seconds=duration_seconds,
+        # An empty set means "the doctor changed nothing", which is stored as
+        # no parameters at all rather than as a row of nothing.
+        parameters=parameters or None,
     )
-    return AssignmentSummary(
-        plan_id=plan.id,
-        title=plan.title,
-        status=plan.status,
-        created_at=plan.created_at,
-        assessment_title=definition.title,
-        duration_seconds=duration_seconds,
+    item = await _first_item(session, plan.id)
+    return _summary(plan, item, definition)
+
+
+async def _first_item(session: AsyncSession, plan_id: int) -> MonitoringPlanItem:
+    """Return a plan's first item.
+
+    An assignment is always a single-assessment plan; this is the one place
+    that assumption is expressed, so a plan that somehow has no item fails
+    loudly here instead of producing a summary with nothing in it.
+    """
+    item = await session.scalar(
+        select(MonitoringPlanItem)
+        .where(MonitoringPlanItem.plan_id == plan_id)
+        .order_by(MonitoringPlanItem.position)
+        .limit(1)
     )
+    if item is None:
+        raise monitoring_service.MonitoringError(monitoring_service.MissingPlanItemMessage.MESSAGE)
+    return item
+
+
+async def _assignment_for_doctor(
+    *,
+    session: AsyncSession,
+    doctor_id: int,
+    patient_id: int,
+    plan_id: int,
+) -> tuple[MonitoringPlan, MonitoringPlanItem, AssessmentDefinition]:
+    """Return one exercise when (and only when) this doctor assigned it.
+
+    Filtered by doctor and patient together, so an exercise that exists but
+    belongs to someone else is indistinguishable from one that never existed.
+    """
+    row = (
+        await session.execute(
+            select(MonitoringPlan, MonitoringPlanItem, AssessmentDefinition)
+            .join(MonitoringPlanItem, MonitoringPlanItem.plan_id == MonitoringPlan.id)
+            .join(
+                AssessmentDefinition,
+                AssessmentDefinition.id == MonitoringPlanItem.assessment_definition_id,
+            )
+            .where(
+                MonitoringPlan.id == plan_id,
+                MonitoringPlan.doctor_id == doctor_id,
+                MonitoringPlan.patient_id == patient_id,
+            )
+            .order_by(MonitoringPlanItem.position)
+            .limit(1)
+        )
+    ).first()
+    if row is None:
+        raise AssignmentNotFoundError
+    return row[0], row[1], row[2]
+
+
+async def update_assignment(  # noqa: PLR0913 - explicit arguments beat a config object
+    *,
+    session: AsyncSession,
+    doctor_id: int,
+    patient_id: int,
+    plan_id: int,
+    title: str | None = None,
+    duration_seconds: int | None = None,
+    parameters: dict[str, int | str] | None = None,
+) -> AssignmentSummary:
+    """Change what an already-assigned exercise asks the patient to do.
+
+    Only the fields the caller supplies are applied, so changing the recording
+    length cannot silently reset the settings and renaming cannot reset the
+    length. The assessment is fixed: a plan item's recorded history belongs to
+    the test it named, so switching tests means removing this exercise and
+    assigning the new one.
+
+    ``parameters`` replaces the stored set rather than merging into it, because
+    the catalog always describes a complete set and a half-updated one would
+    leave the patient doing half of what the doctor last chose.
+
+    An exercise the doctor has already removed is reported as missing rather
+    than edited. The patient is never going to be asked to do it again, so an
+    edit would succeed, return the new settings, and quietly change nothing
+    the patient will ever see.
+
+    An exercise built on a test that has since been held back is refused for
+    the same reason, and this one is reachable in practice: a plan created
+    while the test was live is still in the database. The doctor still sees it
+    in their list, but the patient's plan no longer contains it, so an edit
+    would change nothing anyone sees. Removing it still works.
+    """
+    if await _active_link_id(session, doctor_id=doctor_id, patient_id=patient_id) is None:
+        raise PatientNotLinkedError
+
+    plan, item, definition = await _assignment_for_doctor(
+        session=session,
+        doctor_id=doctor_id,
+        patient_id=patient_id,
+        plan_id=plan_id,
+    )
+    if plan.status == PlanStatus.ARCHIVED.value:
+        raise AssignmentNotFoundError
+
+    if not definition.is_supported:
+        # Checked after the archived test above: an exercise the doctor removed
+        # reads as missing whatever test it was built on.
+        raise monitoring_service.UnsupportedAssessmentError(
+            monitoring_service.UnassignableAssessmentsMessage.for_slugs([definition.slug])
+        )
+
+    if title is not None:
+        plan.title = title
+    if duration_seconds is not None:
+        item.duration_seconds = duration_seconds
+    if parameters is not None:
+        item.parameters = validated_assignment_parameters(definition.slug, parameters)
+    plan.updated_at = _now()
+
+    await session.commit()
+    return _summary(plan, item, definition)
+
+
+async def remove_assignment(
+    *,
+    session: AsyncSession,
+    doctor_id: int,
+    patient_id: int,
+    plan_id: int,
+) -> None:
+    """Remove an exercise from a patient.
+
+    The plan is archived rather than deleted. A recording is a clinical record
+    the patient performed and the longitudinal layer already read, and the
+    cascade from a deleted plan would take the sessions, their raw events and
+    their results with it. Archiving takes the exercise off the patient's next
+    check-in and leaves everything that was recorded against it intact and
+    attributable. Removing an exercise twice is not an error.
+    """
+    if await _active_link_id(session, doctor_id=doctor_id, patient_id=patient_id) is None:
+        raise PatientNotLinkedError
+
+    plan, _item, _definition = await _assignment_for_doctor(
+        session=session,
+        doctor_id=doctor_id,
+        patient_id=patient_id,
+        plan_id=plan_id,
+    )
+    if plan.status == PlanStatus.ARCHIVED.value:
+        return
+
+    plan.status = PlanStatus.ARCHIVED.value
+    plan.updated_at = _now()
+    await session.commit()
 
 
 async def list_assignments(
@@ -496,7 +671,11 @@ async def list_assignments(
     doctor_id: int,
     patient_id: int,
 ) -> list[AssignmentSummary]:
-    """Return the doctor's assignments for one patient, newest first."""
+    """Return the doctor's assignments for one patient, newest first.
+
+    Archived exercises are included with their status, so a doctor can still
+    see what they removed and when.
+    """
     if await _active_link_id(session, doctor_id=doctor_id, patient_id=patient_id) is None:
         raise PatientNotLinkedError
 
@@ -518,18 +697,4 @@ async def list_assignments(
         )
     )
     rows = (await session.execute(statement)).all()
-    return [
-        AssignmentSummary(
-            plan_id=plan.id,
-            title=plan.title,
-            status=plan.status,
-            created_at=plan.created_at,
-            assessment_title=definition.title,
-            duration_seconds=(
-                item.duration_seconds
-                if item.duration_seconds is not None
-                else definition.default_duration_seconds
-            ),
-        )
-        for plan, item, definition in rows
-    ]
+    return [_summary(plan, item, definition) for plan, item, definition in rows]

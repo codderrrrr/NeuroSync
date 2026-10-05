@@ -161,8 +161,11 @@ session; no endpoint accepts a patient identifier from the request.
 | `GET` | `/doctor/patients` | List the doctor's accepted patients |
 | `GET` | `/doctor/patient-links/pending` | List pending patient requests, longest-waiting first |
 | `POST` | `/doctor/patient-links/{link_id}/accept` | Accept a pending patient request |
+| `GET` | `/doctor/assessments` | List the tests this doctor can assign, with each test's settings and their bounds |
 | `GET` | `/doctor/patients/{patient_id}/assignments` | List the exercises this doctor assigned to one patient |
-| `POST` | `/doctor/patients/{patient_id}/assignments` | Assign a finger-tapping exercise (10-600s duration) |
+| `POST` | `/doctor/patients/{patient_id}/assignments` | Assign an exercise: choose the test, the recording length (10-600s) and its settings |
+| `PATCH` | `/doctor/patients/{patient_id}/assignments/{plan_id}` | Change the title, recording length or settings of an assigned exercise |
+| `DELETE` | `/doctor/patients/{patient_id}/assignments/{plan_id}` | Remove an exercise from a patient, keeping what they already recorded |
 | `GET` | `/health` | Liveness probe |
 | `GET` | `/health/db` | Database connectivity probe |
 
@@ -173,19 +176,77 @@ as reported; the API performs no scoring, interpretation, or diagnosis.
 ### Monitoring assessments
 
 The assessment catalog is NeuroSync-owned reference data (seeded by migration
-`0004`): only `finger_tapping` is executable today. `spiral_drawing`,
-`line_tracing` and `handwriting` exist in the catalog with
-`is_supported=false` and are surfaced as "Not available yet"; launching one is
-rejected with `409 Conflict`.
+`0004`, re-synced by `0010` and `0011`). It describes four tests —
+`finger_tapping` (tap task) plus `spiral_drawing`, `line_tracing` and
+`handwriting` (canvas tasks) — but only **two are handed out today**:
+`finger_tapping` and `line_tracing`. Spiral drawing and handwriting have
+runners and are held back until their guides are good enough to ask a patient
+to use; migration `0011` clears their `is_supported` flag.
+
+`is_supported` is the single guard for both reasons a test may be unavailable
+(no runner yet, or deliberately paused), and it is enforced at every step:
+
+* the doctor app lists the entry with a `COMING SOON` tag and will not let it be
+  picked;
+* assigning it returns `409 Conflict`;
+* it is filtered out of `GET /monitoring/plan`, so a patient who was assigned
+  one before it was held back stops seeing it — the plan row and anything
+  recorded against it stay in the database;
+* starting a session for it by id returns `409 Conflict`;
+* editing an exercise built on it returns `409 Conflict`, for the same reason as
+  the plan filter: the patient will never be asked to do that exercise, so an
+  edit would report success and change nothing anyone ever sees. **Removing it
+  still works**, and that is how a doctor clears one out — the doctor app opens
+  the editor on what is stored, explains that the test is not being handed out
+  and leaves the save button disabled.
+
+Held back is not hidden: the catalog keeps describing every entry, so enabling
+one later is a flag change rather than a new assessment.
+
+Each catalog entry also declares the **settings a doctor may change** about
+that test — `ParameterSpec` in `assessment_catalog.py` is the only place those
+keys, bounds and defaults exist. Every test lets the doctor choose a speed
+(`pacing`: slow / comfortable / fast), and each adds the settings that shape
+its own task:
+
+| Test | Settings beyond the recording length |
+| --- | --- |
+| `finger_tapping` | which `hand`, which `finger` |
+| `line_tracing` | `repetitions` (1–10), `line_length_percent` (30–100) |
+| `spiral_drawing` (coming soon) | `turns` (1–6), `size_percent` (40–100) |
+| `handwriting` (coming soon) | the `phrase` to write (≤ 60 chars), `repetitions` (1–5) |
+
+The API validates a doctor's values against those specs, the doctor app renders
+an editor from them (`GET /doctor/assessments`), and the patient app renders
+the resulting test settings from the plan item — so the three can never disagree
+about what a parameter means. A value outside its bounds is rejected with
+`422`, never quietly corrected: the test the patient is given has to be the
+test the doctor thinks they assigned.
 
 A monitoring plan assigns catalog items to a patient with a daily cadence. The
-patient app starts a session, captures **raw tap events** (offsets in
-milliseconds from recording start), and submits them on completion. The server
-then derives descriptive statistics (tap count, mean interval, variability,
-longest pause, tapping rate) and a recording quality of `valid`,
-`borderline`, `incomplete` (too short/too few taps) or `invalid` (ran too
-long). These numbers describe the recording only — there is no scoring, no
-comparison against norms, and no clinical interpretation.
+patient app starts a session, captures **raw events**, and submits them on
+completion. The server then derives descriptive statistics and a recording
+quality of `valid`, `borderline`, `incomplete` or `invalid`. These numbers
+describe the recording only — there is no scoring, no comparison against norms,
+and no clinical interpretation.
+
+Which runner interprets the stream is decided by the assessment's catalog
+`execution_type`, never by what the client sent:
+
+- **Tap task** — `tap` events carrying a millisecond offset. Derived features:
+  tap count, mean interval, variability, longest pause, tapping rate.
+- **Canvas task** — `stroke_start` / `stroke_point` / `stroke_end` events
+  carrying a sampled `x`/`y`. Strokes must nest; a stream that does not is
+  rejected rather than repaired, because guessing where one movement ended
+  would change the pass count quality depends on. Derived features: point and
+  stroke counts, path length, mean and peak speed, path efficiency. A stroke
+  where the finger never moved does not count as a completed pass, so
+  "draw the line three times" is not satisfied by tapping the screen three
+  times.
+
+One `monitoring_results` row holds one execution type's features; a check
+constraint keeps the tap and canvas column sets mutually exclusive so a row can
+never claim to be both or neither.
 
 A monitoring session is an ordinary row in `monitoring_sessions`, identified by
 its integer id and scoped to the patient who owns it — it carries no token of
@@ -195,13 +256,55 @@ cookie (`Secure` only in production) so browser clients work without exposing
 it to scripts, and only a SHA-256 digest of it is stored, so a database leak
 does not expose usable tokens.
 
-A doctor assigns a recording length per exercise. `MonitoringPlanItem.duration_seconds`
-holds that override; when it is null the assessment's catalog default is used.
-That resolved duration is both what the patient app is shown and what the
-quality of the returned recording is judged against, so a compliant recording
-is never marked `invalid` for running past the catalog default. The patient app
-always shows the newest active plan, so the latest assignment is the one a
-patient sees.
+A doctor assigns a recording length and a set of settings per exercise.
+`MonitoringPlanItem.duration_seconds` holds the length override and
+`MonitoringPlanItem.parameters` the validated settings; when either is null the
+catalog default applies. That resolved duration is both what the patient app is
+shown and what the quality of the returned recording is judged against, so a
+compliant recording is never marked `invalid` for running past the catalog
+default. The patient app always shows the newest active plan, so the latest
+assignment is the one a patient sees.
+
+An assigned exercise can be **edited** (`PATCH`, applying only the fields sent)
+and **removed** (`DELETE`). Removing archives the plan rather than deleting it:
+a recording is a clinical record, and the cascade from a deleted plan would take
+the sessions, their raw events and their results with it. A removed exercise
+stays visible to its doctor as archived, and removing one twice succeeds.
+Editing a removed exercise reports it as not found rather than succeeding,
+because the patient will never be asked to do it again and an edit that reported
+success would be a change the patient never sees. The
+test itself is not editable in place — switching which test a patient performs
+is a different instruction, so that is a remove plus an assign, which keeps the
+recordings already taken attached to the test they were taken for.
+
+### Keeping the patient's app current
+
+Nothing is pushed from the server. A doctor assigns an exercise, edits one, or
+accepts a link request on their own machine, and the patient's app finds out by
+re-reading: `MainShell` refreshes `GET /monitoring/plan` and `GET /doctor-links`
+on a 20-second timer, whenever the app returns to the foreground, and whenever
+the patient switches tab. Both screens also offer pull-to-refresh. A refresh
+that fails is silent — the controllers keep the last good data rather than
+replacing a plan the patient can still do with an error.
+
+The tracing runner draws the patient's own marks back onto the canvas as they
+move, from the same points the session submits, with the guide underneath. A
+finished pass and the pass still under the finger are drawn in different
+weights, and a pill per requested pass shows how many are done, so "how much is
+left" is legible mid-movement. Once every requested pass is drawn the runner
+says so and offers to send immediately rather than making the patient wait out
+the recording window.
+
+### What canvas recordings do not do yet
+
+A canvas recording is described and quality-checked, but it is **not** compared
+against a baseline. The longitudinal layer is defined over finger-tapping
+features, and building a second comparison per canvas assessment is separate
+work. Until that exists a canvas session reports no longitudinal state, and the
+medication-timing step is not offered for it — dose timing is supporting
+context for a comparison, and there is no comparison for it to support. It is
+rejected rather than accepted-and-dropped, which would read as the patient
+declining to give their medication.
 
 The Flutter patient application lives in `apps/patient_app` — see its
 `README.md` for setup and run instructions. Checks: `flutter analyze`,

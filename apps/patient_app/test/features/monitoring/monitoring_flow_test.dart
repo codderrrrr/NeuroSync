@@ -60,15 +60,20 @@ Map<String, dynamic> planJson({
   };
 }
 
+/// Shaped exactly as the API returns it: one block, for the runner that
+/// captured the session.
 Map<String, dynamic> resultJson(String quality) {
   return <String, dynamic>{
-    'total_taps': 42,
-    'duration_ms': 30000,
-    'mean_inter_tap_interval_ms': 700,
-    'inter_tap_variability_ms': 90,
-    'longest_pause_ms': 2100,
-    'taps_per_second': 1.4,
     'quality': quality,
+    'taps': <String, dynamic>{
+      'total_taps': 42,
+      'duration_ms': 30000,
+      'mean_inter_tap_interval_ms': 700,
+      'inter_tap_variability_ms': 90,
+      'longest_pause_ms': 2100,
+      'taps_per_second': 1.4,
+    },
+    'canvas': null,
   };
 }
 

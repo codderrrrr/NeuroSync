@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../models/canvas_event.dart';
 import '../models/monitoring_plan.dart';
 import '../models/monitoring_session.dart';
 
@@ -25,14 +26,17 @@ class MonitoringRepository {
     return MonitoringSession.fromJson(body);
   }
 
-  /// Completes a session with the raw tap events captured by the runner.
+  /// Completes a session with the raw events captured by the runner.
   ///
   /// [medicationEventId] attaches a dose the patient already reported as
   /// supporting context. It is optional and the server never guesses one: when
-  /// it is null the resulting context stays unknown.
+  /// it is null the resulting context stays unknown. The server also rejects it
+  /// for a test that has no comparison for it to support, so the app only asks
+  /// during the finger-tapping runner.
   Future<MonitoringSession> completeSession({
     required int sessionId,
-    required List<int> tapOffsetsMs,
+    List<int> tapOffsetsMs = const <int>[],
+    List<CanvasEvent> canvasEvents = const <CanvasEvent>[],
     int? medicationEventId,
   }) async {
     final Map<String, dynamic> body = await _apiClient.postObject(
@@ -41,6 +45,7 @@ class MonitoringRepository {
         'events': <Map<String, dynamic>>[
           for (final int offsetMs in tapOffsetsMs)
             <String, dynamic>{'event_type': 'tap', 'offset_ms': offsetMs},
+          for (final CanvasEvent event in canvasEvents) event.toJson(),
         ],
         'medication_event_id': medicationEventId,
       },

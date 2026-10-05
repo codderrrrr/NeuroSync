@@ -28,7 +28,14 @@ from neurosync.modules.medication.models import (
     MedicationEvent,
 )
 from neurosync.modules.medication.service import MedicationEventNotFoundError
-from neurosync.modules.monitoring.assessment_catalog import ASSESSMENT_CATALOG
+from neurosync.modules.monitoring.assessment_catalog import (
+    ASSESSMENT_CATALOG,
+    ExecutionType,
+    get_spec,
+    required_strokes,
+    resolve_parameters,
+)
+from neurosync.modules.monitoring.canvas_features import extract_canvas_features
 from neurosync.modules.monitoring.features import extract_tap_features
 from neurosync.modules.monitoring.longitudinal import (
     FeatureValues,
@@ -47,6 +54,7 @@ from neurosync.modules.monitoring.models import (
     AssessmentDefinition,
     BaselineConfidence,
     LongitudinalResult,
+    MissingResultShapeError,
     MonitoringPlan,
     MonitoringPlanItem,
     MonitoringResult,
@@ -55,14 +63,18 @@ from neurosync.modules.monitoring.models import (
     PatientBaseline,
     PlanStatus,
     SessionStatus,
+    tap_recording_features,
 )
-from neurosync.modules.monitoring.quality import evaluate_quality
+from neurosync.modules.monitoring.quality import evaluate_canvas_quality, evaluate_quality
 from neurosync.modules.monitoring.schemas import (
+    EVENT_TYPE_TAP,
     AssessmentResponse,
     CompleteSessionRequest,
     PlanItemResponse,
     TapEventRequest,
+    canvas_strokes,
     event_offsets_ms,
+    parameter_responses,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,7 +85,11 @@ class MonitoringError(Exception):
 
 
 class UnsupportedAssessmentError(MonitoringError):
-    """Raised when an assessment without a runner would become a patient task."""
+    """Raised when an assessment that is not being handed out would become a task.
+
+    ``is_supported`` is false both for a test with no runner yet and for one
+    deliberately held back, and neither may reach a patient.
+    """
 
 
 class PlanNeedsAssessmentsMessage:
@@ -95,7 +111,7 @@ class UnassignableAssessmentsMessage:
 
     @staticmethod
     def for_slugs(slugs: list[str]) -> str:
-        return f"Assessments without a runner cannot be assigned: {slugs}"
+        return f"Assessments that are not being handed out cannot be assigned: {slugs}"
 
 
 class MissingDefinitionMessage:
@@ -133,7 +149,33 @@ class SessionNotFoundError(MonitoringError):
 
 
 class InvalidEventDataError(MonitoringError):
-    """Raised when a session's event stream is not a valid tap recording."""
+    """Raised when a session's event stream is not a valid recording."""
+
+
+class MissingCanvasCoordinatesMessage:
+    """Message for a canvas event whose payload has no usable coordinate."""
+
+    MESSAGE = "Canvas events must carry numeric 'x' and 'y' values."
+
+
+class MedicationContextNotSupportedMessage:
+    """Message for a dose reported against an assessment that cannot use it.
+
+    A canvas recording has no longitudinal comparison yet, so there is nothing
+    for the dose timing to be supporting context for. Rejecting the report is
+    honest; accepting and dropping it would read as the patient declining to
+    give their medication, which is the opposite of what happened.
+    """
+
+    MESSAGE = "Medication context is recorded for assessments that have a longitudinal comparison."
+
+
+class UnknownExecutionTypeMessage:
+    """Message for a catalog entry whose execution type no runner implements."""
+
+    @staticmethod
+    def for_value(execution_type: str) -> str:
+        return f"No runner is implemented for execution type {execution_type!r}."
 
 
 class UnknownMedicationEventError(MonitoringError):
@@ -143,6 +185,10 @@ class UnknownMedicationEventError(MonitoringError):
     ownership boundary honest: another patient's event must not quietly
     become "no medication information" for this session.
     """
+
+
+class MedicationContextNotSupportedError(MonitoringError):
+    """Raised when a dose is reported for an assessment that cannot use it."""
 
 
 def _utc_today_start() -> datetime:
@@ -166,6 +212,40 @@ def resolve_item_duration_seconds(
         item.duration_seconds
         if item.duration_seconds is not None
         else definition.default_duration_seconds
+    )
+
+
+def resolve_item_parameters(
+    item: MonitoringPlanItem,
+    definition: AssessmentDefinition,
+) -> dict[str, int | str]:
+    """Return every doctor-set parameter for one plan item.
+
+    Stored values win, catalog defaults fill the gaps, and an assessment that
+    declares no parameters resolves to an empty set. This is the single rule
+    for "what exactly was this patient asked to do", so the plan the client is
+    shown and the quality evaluation of the recording that came back can never
+    disagree.
+    """
+    spec = get_spec(definition.slug)
+    if spec is None:
+        return {}
+    return resolve_parameters(item.parameters, spec)
+
+
+def assessment_response(definition: AssessmentDefinition) -> AssessmentResponse:
+    """Render one catalog row, including what a doctor may change about it."""
+    spec = get_spec(definition.slug)
+    return AssessmentResponse(
+        id=definition.id,
+        slug=definition.slug,
+        title=definition.title,
+        description=definition.description,
+        instructions=definition.instructions,
+        execution_type=definition.execution_type,
+        default_duration_seconds=definition.default_duration_seconds,
+        is_supported=definition.is_supported,
+        parameters=[] if spec is None else parameter_responses(spec),
     )
 
 
@@ -219,6 +299,7 @@ async def create_plan(  # noqa: PLR0913 - explicit arguments beat a config objec
     doctor_id: int | None = None,
     status: PlanStatus = PlanStatus.ACTIVE,
     duration_seconds: int | None = None,
+    parameters: dict[str, int | str] | None = None,
 ) -> MonitoringPlan:
     """Create a plan from catalog assessments, in the given order.
 
@@ -227,7 +308,9 @@ async def create_plan(  # noqa: PLR0913 - explicit arguments beat a config objec
     runner can never be assigned. Draft plans keep the same rule at item level;
     publishing (activating) a draft re-checks every item. ``duration_seconds``
     optionally overrides each item's recording target (a doctor-controlled
-    exercise length); ``None`` keeps the catalog default.
+    exercise length); ``None`` keeps the catalog default. ``parameters`` is the
+    rest of what the doctor set, already validated against the assessment's
+    catalog specs by the API boundary.
     """
     if not assessment_definition_ids:
         raise MonitoringError(PlanNeedsAssessmentsMessage.MESSAGE)
@@ -270,6 +353,7 @@ async def create_plan(  # noqa: PLR0913 - explicit arguments beat a config objec
                 assessment_definition_id=definition_id,
                 position=position,
                 duration_seconds=duration_seconds,
+                parameters=parameters,
             )
         )
     await session.commit()
@@ -286,6 +370,12 @@ async def get_patient_plan(
     ``completed_today`` counts sessions finished since midnight UTC so the
     client can show the next available assessment without deciding anything
     itself.
+
+    Items whose assessment is not supported are left out. A test can be held
+    back after a doctor assigned it -- that is what ``is_supported`` is for --
+    and a patient must not be shown a task NeuroSync has decided not to ask
+    for. The plan item and any recordings made against it stay in the database;
+    only the patient's view of what to do next changes.
     """
     plan = await session.scalar(
         select(MonitoringPlan)
@@ -302,7 +392,14 @@ async def get_patient_plan(
     items = list(
         await session.scalars(
             select(MonitoringPlanItem)
-            .where(MonitoringPlanItem.plan_id == plan.id)
+            .join(
+                AssessmentDefinition,
+                AssessmentDefinition.id == MonitoringPlanItem.assessment_definition_id,
+            )
+            .where(
+                MonitoringPlanItem.plan_id == plan.id,
+                AssessmentDefinition.is_supported.is_(True),
+            )
             .order_by(MonitoringPlanItem.position)
         )
     )
@@ -334,14 +431,13 @@ async def get_patient_plan(
     item_responses = [
         PlanItemResponse(
             id=item.id,
-            assessment=AssessmentResponse.model_validate(
-                definitions[item.assessment_definition_id]
-            ),
+            assessment=assessment_response(definitions[item.assessment_definition_id]),
             position=item.position,
             completed_today=completed_today.get(item.id, 0),
             duration_seconds=resolve_item_duration_seconds(
                 item, definitions[item.assessment_definition_id]
             ),
+            parameters=resolve_item_parameters(item, definitions[item.assessment_definition_id]),
         )
         for item in items
     ]
@@ -382,9 +478,10 @@ async def start_session(
     )
     definition = await session.get(AssessmentDefinition, item.assessment_definition_id)
     if definition is None or not definition.is_supported:
-        # A plan can only contain supported assessments, so reaching this guard
-        # means the catalog changed under us; fail loudly rather than hand the
-        # patient a task no runner can perform.
+        # The plan read path already hides these, so reaching this guard means
+        # a client asked for one by id. A test can be held back after a doctor
+        # assigned it, and the patient must not be able to open a session for a
+        # task NeuroSync has decided not to hand out.
         raise UnsupportedAssessmentError(
             UnassignableAssessmentsMessage.for_slugs([str(item.assessment_definition_id)])
         )
@@ -440,6 +537,12 @@ def baseline_explanation(stored: PatientBaseline) -> str:
     return _baseline_from_row(stored).explanation()
 
 
+class NonTapRecordingMessage:
+    """Message for a recording the longitudinal layer cannot compare."""
+
+    MESSAGE = "Only finger-tapping recordings take part in longitudinal comparison."
+
+
 def _observation_from_row(monitoring_session: MonitoringSession) -> Observation:
     """Adapt one session and its stored result into a comparable observation.
 
@@ -449,15 +552,19 @@ def _observation_from_row(monitoring_session: MonitoringSession) -> Observation:
     result = monitoring_session.result
     if result is None:
         raise MonitoringError(MissingResultMessage.MESSAGE)
+    try:
+        taps = tap_recording_features(result)
+    except MissingResultShapeError as exc:
+        raise MonitoringError(NonTapRecordingMessage.MESSAGE) from exc
     longitudinal = monitoring_session.longitudinal
     return Observation(
         session_id=monitoring_session.id,
         quality=result.quality,
         values=FeatureValues(
-            taps_per_second=result.taps_per_second,
-            mean_inter_tap_interval_ms=result.mean_inter_tap_interval_ms,
-            inter_tap_variability_ms=result.inter_tap_variability_ms,
-            longest_pause_ms=result.longest_pause_ms,
+            taps_per_second=taps.taps_per_second,
+            mean_inter_tap_interval_ms=taps.mean_inter_tap_interval_ms,
+            inter_tap_variability_ms=taps.inter_tap_variability_ms,
+            longest_pause_ms=taps.longest_pause_ms,
         ),
         # Sessions recorded before this layer existed resolve to unknown rather
         # than being retrofitted with a context they never had.
@@ -509,6 +616,9 @@ async def list_observations(
             MonitoringSession.patient_id == patient_id,
             MonitoringSession.assessment_definition_id == assessment_definition_id,
             MonitoringSession.status == SessionStatus.COMPLETED.value,
+            # The comparison layer is defined over finger-tapping features, so
+            # a canvas recording can never leak into a baseline as zeros.
+            MonitoringResult.total_taps.is_not(None),
         )
         .order_by(MonitoringSession.completed_at, MonitoringSession.id)
         # The session being completed is already in the identity map holding a
@@ -827,8 +937,10 @@ async def complete_session(
     """Persist raw events, derive the result, and close the session.
 
     The event stream is stored exactly as captured; everything else in the
-    result is derived deterministically from it. Completing twice fails
-    explicitly instead of duplicating results.
+    result is derived deterministically from it. Which runner interprets the
+    stream is decided by the assessment's catalog ``execution_type``, never by
+    what the client happened to send. Completing twice fails explicitly instead
+    of duplicating results.
     """
     monitoring_session = await get_session_for_patient(
         session=session,
@@ -838,8 +950,6 @@ async def complete_session(
     if monitoring_session.status != SessionStatus.IN_PROGRESS.value:
         raise InactiveSessionError
 
-    offsets = _to_tap_offsets(payload.events)
-    features = extract_tap_features(offsets)
     definition = await session.get(
         AssessmentDefinition,
         monitoring_session.assessment_definition_id,
@@ -853,6 +963,52 @@ async def complete_session(
     # the catalog default: a patient who complies with a longer assignment must
     # not be recorded as `invalid` for running past the shorter default.
     target_ms = resolve_item_duration_seconds(item, definition) * 1000
+
+    execution_type = _execution_type_of(definition)
+    if execution_type is ExecutionType.CANVAS_TASK:
+        return await _complete_canvas_session(
+            session=session,
+            patient_id=patient_id,
+            monitoring_session=monitoring_session,
+            definition=definition,
+            item=item,
+            payload=payload,
+            target_ms=target_ms,
+        )
+    return await _complete_tap_session(
+        session=session,
+        patient_id=patient_id,
+        monitoring_session=monitoring_session,
+        payload=payload,
+        target_ms=target_ms,
+    )
+
+
+def _execution_type_of(definition: AssessmentDefinition) -> ExecutionType:
+    """Return the assessment's execution type, failing on an unknown one.
+
+    A catalog entry nobody has written a runner for cannot be completed, and
+    guessing would mean interpreting the event stream the wrong way.
+    """
+    try:
+        return ExecutionType(definition.execution_type)
+    except ValueError as exc:
+        raise UnsupportedAssessmentError(
+            UnknownExecutionTypeMessage.for_value(definition.execution_type)
+        ) from exc
+
+
+async def _complete_tap_session(
+    *,
+    session: AsyncSession,
+    patient_id: int,
+    monitoring_session: MonitoringSession,
+    payload: CompleteSessionRequest,
+    target_ms: int,
+) -> tuple[MonitoringSession, MonitoringResult]:
+    """Record one finger-tapping execution and compare it with the history."""
+    offsets = _to_tap_offsets(payload.events)
+    features = extract_tap_features(offsets)
     quality = evaluate_quality(features=features, target_duration_ms=target_ms)
 
     now = datetime.now(UTC)
@@ -884,7 +1040,7 @@ async def complete_session(
         session.add(
             MonitoringSessionEvent(
                 session_id=monitoring_session.id,
-                event_type="tap",
+                event_type=EVENT_TYPE_TAP,
                 offset_ms=offset,
             )
         )
@@ -921,14 +1077,94 @@ async def complete_session(
     )
 
     await session.commit()
-    await session.refresh(result)
-    # Re-read with the result relationship eagerly loaded (see start_session).
-    reloaded = await get_session_for_patient(
+    return await _reloaded_session(session, patient_id, monitoring_session), result
+
+
+async def _complete_canvas_session(  # noqa: PLR0913 - explicit arguments beat a config object
+    *,
+    session: AsyncSession,
+    patient_id: int,
+    monitoring_session: MonitoringSession,
+    definition: AssessmentDefinition,
+    item: MonitoringPlanItem,
+    payload: CompleteSessionRequest,
+    target_ms: int,
+) -> tuple[MonitoringSession, MonitoringResult]:
+    """Record one canvas (tracing) execution.
+
+    Canvas recordings are described, not compared: the longitudinal layer is
+    defined over finger-tapping features, and building a second comparison for
+    every canvas assessment is a separate piece of work. Until that exists this
+    session stores its raw events, its deterministic features and its quality,
+    and reports no state and no medication context - rather than a comparison
+    against a finger-tapping baseline, which would mean nothing.
+    """
+    if payload.medication_event_id is not None:
+        raise MedicationContextNotSupportedError
+
+    try:
+        strokes = canvas_strokes(payload.events)
+    except ValueError as exc:
+        raise InvalidEventDataError(str(exc)) from exc
+
+    offsets = [point.offset_ms for stroke in strokes for point in stroke]
+    if sorted(offsets) != offsets:
+        raise InvalidEventDataError(NonMonotonicOffsetsMessage.MESSAGE)
+
+    features = extract_canvas_features(strokes)
+    spec = get_spec(definition.slug)
+    parameters = resolve_item_parameters(item, definition)
+    quality = evaluate_canvas_quality(
+        features=features,
+        target_duration_ms=target_ms,
+        required_strokes=1 if spec is None else required_strokes(spec, parameters),
+    )
+
+    for event in payload.events:
+        session.add(
+            MonitoringSessionEvent(
+                session_id=monitoring_session.id,
+                event_type=event.event_type,
+                offset_ms=event.offset_ms,
+                payload=event.payload,
+            )
+        )
+    result = MonitoringResult(
+        session_id=monitoring_session.id,
+        duration_ms=features.duration_ms,
+        longest_pause_ms=features.longest_pause_ms,
+        total_points=features.total_points,
+        stroke_count=features.stroke_count,
+        path_length=features.path_length,
+        mean_speed_px_per_second=features.mean_speed_px_per_second,
+        peak_speed_px_per_second=features.peak_speed_px_per_second,
+        path_efficiency=features.path_efficiency,
+        quality=quality.value,
+    )
+    session.add(result)
+    monitoring_session.status = SessionStatus.COMPLETED.value
+    monitoring_session.completed_at = datetime.now(UTC)
+
+    await session.commit()
+    return await _reloaded_session(session, patient_id, monitoring_session), result
+
+
+async def _reloaded_session(
+    session: AsyncSession,
+    patient_id: int,
+    monitoring_session: MonitoringSession,
+) -> MonitoringSession:
+    """Re-read a completed session with its relationships eagerly loaded.
+
+    AsyncSession never lazy-loads, and a long-lived request session can hold a
+    pre-write copy of this row, so the database is re-read rather than the
+    identity map reused.
+    """
+    return await get_session_for_patient(
         session=session,
         patient_id=patient_id,
         monitoring_session_id=monitoring_session.id,
     )
-    return reloaded, result
 
 
 async def get_session_for_patient(

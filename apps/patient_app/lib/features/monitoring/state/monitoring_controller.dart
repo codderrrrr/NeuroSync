@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../data/monitoring_repository.dart';
+import '../models/canvas_event.dart';
 import '../models/monitoring_plan.dart';
 import '../models/monitoring_session.dart';
 
@@ -87,18 +88,21 @@ class MonitoringController extends ChangeNotifier {
     }
   }
 
-  /// Completes the active session with the runner's raw tap offsets.
+  /// Completes the active session with the runner's raw event stream.
   ///
-  /// [medicationEventId] is the dose the patient reported for this assessment,
-  /// if any. It is passed through untouched: the app does not decide whether
-  /// the timing counts, and a session completed without one is a complete and
-  /// valid outcome rather than a degraded one.
+  /// One method for both runners: a finger-tapping recording arrives as tap
+  /// offsets, a tracing recording as canvas events, and the backend decides
+  /// which it is meant to be from the assessment. [medicationEventId] is the
+  /// dose the patient reported, passed through untouched - the app does not
+  /// decide whether the timing counts, and a session completed without one is a
+  /// complete and valid outcome rather than a degraded one.
   ///
   /// The completed session, including the server-computed result, is kept as
   /// [lastCompletedSession] so the result screen can show exactly what the
   /// backend stored.
   Future<bool> completeSession(
     List<int> tapOffsetsMs, {
+    List<CanvasEvent> canvasEvents = const <CanvasEvent>[],
     int? medicationEventId,
   }) async {
     final MonitoringSession? active = _activeSession;
@@ -112,6 +116,7 @@ class MonitoringController extends ChangeNotifier {
       final MonitoringSession completed = await _repository.completeSession(
         sessionId: active.id,
         tapOffsetsMs: tapOffsetsMs,
+        canvasEvents: canvasEvents,
         medicationEventId: medicationEventId,
       );
       _lastCompletedSession = completed;

@@ -35,8 +35,8 @@ void main() {
       expect(session.id, 4);
       expect(session.isCompleted, isTrue);
       expect(session.result?.quality, RecordingQuality.valid);
-      expect(session.result?.totalTaps, 30);
-      expect(session.result?.tapsPerSecond, closeTo(1.034, 0.0001));
+      expect(session.result?.taps?.totalTaps, 30);
+      expect(session.result?.taps?.tapsPerSecond, closeTo(1.034, 0.0001));
 
       final LongitudinalSummary? summary = session.longitudinal;
       expect(summary, isNotNull);
@@ -55,7 +55,7 @@ void main() {
         _fixtureObject('session_within_baseline'),
       );
 
-      expect(session.result?.interTapVariabilityMs, 0);
+      expect(session.result?.taps?.interTapVariabilityMs, 0);
     });
 
     test('the history page parses every session it returns', () {

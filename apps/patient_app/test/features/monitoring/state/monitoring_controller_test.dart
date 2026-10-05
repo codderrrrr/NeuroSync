@@ -52,13 +52,16 @@ Map<String, dynamic> sessionJson({
 
 Map<String, dynamic> resultJson({String quality = 'valid'}) {
   return <String, dynamic>{
-    'total_taps': 90,
-    'duration_ms': 30000,
-    'mean_inter_tap_interval_ms': 333,
-    'inter_tap_variability_ms': 42,
-    'longest_pause_ms': 900,
-    'taps_per_second': 3.0,
     'quality': quality,
+    'taps': <String, dynamic>{
+      'total_taps': 90,
+      'duration_ms': 30000,
+      'mean_inter_tap_interval_ms': 333,
+      'inter_tap_variability_ms': 42,
+      'longest_pause_ms': 900,
+      'taps_per_second': 3.0,
+    },
+    'canvas': null,
   };
 }
 

@@ -1,5 +1,6 @@
 """API integration tests for the monitoring vertical."""
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
 import pytest
@@ -22,10 +23,28 @@ from tests.factories import (
     signup_patient,
 )
 
+# The `without_runner` fixture: puts a catalog assessment into the "no runner"
+# state and restores it afterwards.
+WithoutRunner = Callable[[str], Awaitable[None]]
+
 
 def _steady_taps(count: int = 90, interval_ms: int = 333) -> list[dict[str, object]]:
     """A steady recording: taps every ``interval_ms`` for ``count`` taps."""
     return [{"event_type": "tap", "offset_ms": i * interval_ms} for i in range(count)]
+
+
+async def _start_session(
+    client: AsyncClient,
+    token: str,
+    plan_item_id: int,
+) -> dict[str, object]:
+    response = await client.post(
+        "/monitoring/sessions",
+        headers=auth_headers(token),
+        json={"plan_item_id": plan_item_id},
+    )
+    assert response.status_code == codes.CREATED, response.text
+    return response.json()
 
 
 async def _start_session(
@@ -68,12 +87,45 @@ async def test_catalog_lists_all_assessments_with_support_flags(
         "line_tracing",
         "handwriting",
     }
-    assert by_slug["finger_tapping"]["is_supported"] is True
     assert by_slug["finger_tapping"]["execution_type"] == "tap_task"
     assert by_slug["finger_tapping"]["default_duration_seconds"] == 30
-    for future_slug in ("spiral_drawing", "line_tracing", "handwriting"):
-        assert by_slug[future_slug]["is_supported"] is False
-        assert by_slug[future_slug]["execution_type"] == "canvas_task"
+    # Finger tapping and line tracing are the two a doctor may assign. Spiral
+    # drawing and handwriting are held back, so they report themselves as
+    # unsupported while staying listed with everything else.
+    for slug in ("finger_tapping", "line_tracing"):
+        assert by_slug[slug]["is_supported"] is True, slug
+    for slug in ("spiral_drawing", "handwriting"):
+        assert by_slug[slug]["is_supported"] is False, slug
+    for slug, item in by_slug.items():
+        # Every entry keeps describing itself, supported or not, so a client can
+        # render a held-back one without special-casing it.
+        assert item["title"], slug
+        assert item["instructions"], slug
+        assert item["parameters"], slug
+    for canvas_slug in ("spiral_drawing", "line_tracing", "handwriting"):
+        assert by_slug[canvas_slug]["execution_type"] == "canvas_task"
+
+
+async def test_catalog_describes_what_a_doctor_can_change_about_each_test(
+    client: AsyncClient,
+    db: AsyncSession,
+) -> None:
+    await seed_assessment_catalog(db)
+    _, token = await signup_patient(client)
+
+    response = await client.get("/assessments", headers=auth_headers(token))
+
+    assert response.status_code == codes.OK
+    by_slug = {item["slug"]: item for item in response.json()}
+    hand = next(p for p in by_slug["finger_tapping"]["parameters"] if p["key"] == "hand")
+    assert hand["kind"] == "choice"
+    assert hand["choices"] == ["left", "right"]
+    assert hand["default"] == "right"
+    phrase = next(p for p in by_slug["handwriting"]["parameters"] if p["key"] == "phrase")
+    assert phrase["kind"] == "text"
+    assert phrase["max_length"] == 60
+    turns = next(p for p in by_slug["spiral_drawing"]["parameters"] if p["key"] == "turns")
+    assert (turns["minimum"], turns["maximum"]) == (1, 6)
 
 
 async def test_catalog_is_seeded_by_migration(client: AsyncClient) -> None:
@@ -139,8 +191,10 @@ async def test_plan_hides_other_patients_plans(client: AsyncClient, db: AsyncSes
 async def test_plan_creation_rejects_unsupported_assessments(
     client: AsyncClient,
     db: AsyncSession,
+    without_runner: WithoutRunner,
 ) -> None:
-    _, token = await signup_patient(client)
+    await signup_patient(client)
+    await without_runner("spiral_drawing")
     spiral = await db.scalar(
         select(AssessmentDefinition).where(AssessmentDefinition.slug == "spiral_drawing")
     )
@@ -158,9 +212,11 @@ async def test_plan_creation_rejects_unsupported_assessments(
 async def test_starting_session_for_unsupported_assessment_is_rejected(
     client: AsyncClient,
     db: AsyncSession,
+    without_runner: WithoutRunner,
 ) -> None:
     patient_id, token = await signup_patient(client)
     plan_item_id = await create_default_plan(db, patient_id)
+    await without_runner("spiral_drawing")
     spiral = await db.scalar(
         select(AssessmentDefinition).where(AssessmentDefinition.slug == "spiral_drawing")
     )
@@ -257,12 +313,14 @@ async def test_complete_session_persists_events_and_result(
     assert body["status"] == "completed"
     assert body["completed_at"] is not None
     result = body["result"]
-    assert result["total_taps"] == 6
-    assert result["duration_ms"] == 5000
-    assert result["mean_inter_tap_interval_ms"] == 1000
-    assert result["longest_pause_ms"] == 1000
-    # 5 seconds against a 30-second target is under half the expected length.
     assert result["quality"] == "incomplete"
+    # A finger-tapping recording fills the tap block and leaves the canvas one
+    # empty, so a client never has to guess which features it is looking at.
+    assert result["canvas"] is None
+    assert result["taps"]["total_taps"] == 6
+    assert result["taps"]["duration_ms"] == 5000
+    assert result["taps"]["mean_inter_tap_interval_ms"] == 1000
+    assert result["taps"]["longest_pause_ms"] == 1000
 
     row = await db.scalar(select(MonitoringResult).where(MonitoringResult.session_id == session_id))
     assert row is not None
@@ -539,8 +597,8 @@ async def test_quality_judges_a_recording_against_the_assigned_duration(
 
     assert response.status_code == codes.OK, response.text
     result = response.json()["result"]
-    assert result["duration_ms"] == 119_000
-    assert result["total_taps"] == 120
+    assert result["taps"]["duration_ms"] == 119_000
+    assert result["taps"]["total_taps"] == 120
     assert result["quality"] == "valid"
 
 
@@ -562,7 +620,7 @@ async def test_quality_falls_back_to_the_catalog_default_without_an_assignment(
 
     assert response.status_code == codes.OK, response.text
     result = response.json()["result"]
-    assert result["duration_ms"] == 29_000
+    assert result["taps"]["duration_ms"] == 29_000
     assert result["quality"] == "valid"
 
 

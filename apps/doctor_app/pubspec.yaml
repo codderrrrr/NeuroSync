@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Material controls fall back to Cupertino glyphs for their text
+  # selection menus. Without the font those icons draw as blank boxes.
+  cupertino_icons: ^1.0.8
   http: ^1.2.2
   flutter_secure_storage: ^9.2.2
 

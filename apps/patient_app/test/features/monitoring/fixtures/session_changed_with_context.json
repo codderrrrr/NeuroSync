@@ -14,13 +14,16 @@
   "started_at": "2026-10-03T08:13:44.703612Z",
   "completed_at": "2026-10-03T08:13:44.738156Z",
   "result": {
-    "total_taps": 10,
-    "duration_ms": 27000,
-    "mean_inter_tap_interval_ms": 3000,
-    "inter_tap_variability_ms": 0,
-    "longest_pause_ms": 3000,
-    "taps_per_second": 0.37,
-    "quality": "valid"
+    "quality": "valid",
+    "taps": {
+      "total_taps": 10,
+      "duration_ms": 27000,
+      "mean_inter_tap_interval_ms": 3000,
+      "inter_tap_variability_ms": 0,
+      "longest_pause_ms": 3000,
+      "taps_per_second": 0.37
+    },
+    "canvas": null
   },
   "longitudinal": {
     "state": "changed",

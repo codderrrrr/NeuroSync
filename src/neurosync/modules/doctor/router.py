@@ -29,8 +29,11 @@ from neurosync.modules.doctor.schemas import (
     DoctorSignupRequest,
     PendingLinkResponse,
     RosterPatientResponse,
+    UpdateAssignmentRequest,
 )
 from neurosync.modules.doctor.service import (
+    AssignmentNotFoundError,
+    AssignmentSummary,
     DoctorEmailAlreadyRegisteredError,
     DoctorNameAlreadyRegisteredError,
     InactiveDoctorError,
@@ -44,8 +47,10 @@ from neurosync.modules.doctor.service import (
     list_assignments,
     list_pending_requests,
     login_doctor,
+    remove_assignment,
     revoke_doctor_session,
     signup_doctor,
+    update_assignment,
 )
 from neurosync.modules.doctor_linking.models import DoctorLinkStatus
 from neurosync.modules.exceptions import service as exception_service
@@ -57,6 +62,8 @@ from neurosync.modules.exceptions.schemas import (
     ReviewExceptionRequest,
 )
 from neurosync.modules.monitoring import service as monitoring_service
+from neurosync.modules.monitoring.assessment_catalog import ParameterValidationError
+from neurosync.modules.monitoring.schemas import AssessmentResponse
 
 router = APIRouter(prefix="/doctor", tags=["doctor"])
 
@@ -276,11 +283,62 @@ async def accept_link(
     )
 
 
+def _assignment_response(assignment: AssignmentSummary) -> DoctorAssignmentResponse:
+    return DoctorAssignmentResponse(
+        id=assignment.plan_id,
+        title=assignment.title,
+        status=assignment.status,
+        created_at=assignment.created_at,
+        updated_at=assignment.updated_at,
+        assessment_slug=assignment.assessment_slug,
+        assessment_title=assignment.assessment_title,
+        duration_seconds=assignment.duration_seconds,
+        parameters=assignment.parameters,
+    )
+
+
+def _assignment_not_found() -> HTTPException:
+    """The 404 for a missing exercise, worded like the missing-patient 404.
+
+    An exercise that belongs to another doctor, or to another patient, must not
+    be distinguishable from one that never existed.
+    """
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Exercise not found for this patient.",
+    )
+
+
+@router.get(
+    "/assessments",
+    response_model=list[AssessmentResponse],
+    summary="List the tests a doctor can assign",
+    description=(
+        "Returns the assessment catalog with each test's declared settings: "
+        "the recording length, plus whatever else a doctor can change about "
+        "that particular test, such as which hand to use or how fast to move. "
+        "The bounds and defaults here are the ones the API validates against, "
+        "so an editor built from this response can never offer a value the "
+        "assignment would reject."
+    ),
+)
+async def list_assignable_assessments(
+    doctor: CurrentDoctor,  # noqa: ARG001 - authentication is the gate
+    session: DbSession,
+) -> list[AssessmentResponse]:
+    definitions = await monitoring_service.get_assessment_catalog(session)
+    return [monitoring_service.assessment_response(d) for d in definitions]
+
+
 @router.get(
     "/patients/{patient_id}/assignments",
     response_model=list[DoctorAssignmentResponse],
     summary="List the doctor's assignments for one patient",
-    description="Newest assignment first. The patient must be on the doctor's roster.",
+    description=(
+        "Newest assignment first. Removed exercises stay listed with their "
+        "archived status, so what a doctor took away is still visible. The "
+        "patient must be on the doctor's roster."
+    ),
 )
 async def list_patient_assignments(
     patient_id: int,
@@ -298,17 +356,7 @@ async def list_patient_assignments(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Patient not found in your roster.",
         ) from exc
-    return [
-        DoctorAssignmentResponse(
-            id=assignment.plan_id,
-            title=assignment.title,
-            status=assignment.status,
-            created_at=assignment.created_at,
-            assessment_title=assignment.assessment_title,
-            duration_seconds=assignment.duration_seconds,
-        )
-        for assignment in assignments
-    ]
+    return [_assignment_response(assignment) for assignment in assignments]
 
 
 @router.post(
@@ -317,9 +365,11 @@ async def list_patient_assignments(
     status_code=status.HTTP_201_CREATED,
     summary="Assign an exercise to a linked patient",
     description=(
-        "Creates an active monitoring plan for the patient with the given "
-        "recording duration. Only assessments with a runner (currently finger "
-        "tapping) can be assigned. The patient must be on the doctor's roster."
+        "Creates an active monitoring plan for the patient. Choose the test "
+        "with ``assessment_slug``, how long it runs for, and any of that "
+        "test's declared settings; anything left out keeps its catalog "
+        "default. Only assessments with a runner can be assigned. The patient "
+        "must be on the doctor's roster."
     ),
 )
 async def create_patient_assignment(
@@ -336,11 +386,17 @@ async def create_patient_assignment(
             title=payload.title,
             assessment_slug=payload.assessment_slug,
             duration_seconds=payload.duration_seconds,
+            parameters=payload.parameters,
         )
     except PatientNotLinkedError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Patient not found in your roster.",
+        ) from exc
+    except ParameterValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
         ) from exc
     except monitoring_service.UnsupportedAssessmentError as exc:
         raise HTTPException(
@@ -348,14 +404,98 @@ async def create_patient_assignment(
             detail="This assessment is not available for assignment.",
         ) from exc
 
-    return DoctorAssignmentResponse(
-        id=assignment.plan_id,
-        title=assignment.title,
-        status=assignment.status,
-        created_at=assignment.created_at,
-        assessment_title=assignment.assessment_title,
-        duration_seconds=assignment.duration_seconds,
-    )
+    return _assignment_response(assignment)
+
+
+@router.patch(
+    "/patients/{patient_id}/assignments/{plan_id}",
+    response_model=DoctorAssignmentResponse,
+    summary="Change an exercise already assigned to a patient",
+    description=(
+        "Applies only the fields sent, so the recording length, the settings "
+        "and the title can each be changed on their own. Settings replace the "
+        "previous set outright rather than merging into it. The test itself "
+        "cannot be swapped here: remove this exercise and assign the new one "
+        "instead, so the recordings already taken stay attached to the test "
+        "they were taken for. An exercise that has already been removed cannot "
+        "be edited, and neither can one built on an assessment that is no "
+        "longer handed out: remove that exercise instead."
+    ),
+)
+async def edit_patient_assignment(
+    patient_id: int,
+    plan_id: int,
+    payload: UpdateAssignmentRequest,
+    doctor: CurrentDoctor,
+    session: DbSession,
+) -> DoctorAssignmentResponse:
+    try:
+        assignment = await update_assignment(
+            session=session,
+            doctor_id=doctor.id,
+            patient_id=patient_id,
+            plan_id=plan_id,
+            title=payload.title if payload.changed("title") else None,
+            duration_seconds=(
+                payload.duration_seconds if payload.changed("duration_seconds") else None
+            ),
+            parameters=payload.parameters if payload.changed("parameters") else None,
+        )
+    except PatientNotLinkedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found in your roster.",
+        ) from exc
+    except AssignmentNotFoundError as exc:
+        raise _assignment_not_found() from exc
+    except ParameterValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except monitoring_service.UnsupportedAssessmentError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This exercise is based on an assessment that is no longer "
+                "handed out, so it cannot be changed. Remove it instead."
+            ),
+        ) from exc
+    return _assignment_response(assignment)
+
+
+@router.delete(
+    "/patients/{patient_id}/assignments/{plan_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove an exercise from a patient",
+    description=(
+        "Takes the exercise off the patient's next check-in. Recordings the "
+        "patient already made are kept: a recording is a clinical record, and "
+        "removing a task must not take the patient's history with it. The "
+        "exercise stays visible to this doctor as archived. Removing one that "
+        "is already removed succeeds without changing anything."
+    ),
+)
+async def delete_patient_assignment(
+    patient_id: int,
+    plan_id: int,
+    doctor: CurrentDoctor,
+    session: DbSession,
+) -> None:
+    try:
+        await remove_assignment(
+            session=session,
+            doctor_id=doctor.id,
+            patient_id=patient_id,
+            plan_id=plan_id,
+        )
+    except PatientNotLinkedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found in your roster.",
+        ) from exc
+    except AssignmentNotFoundError as exc:
+        raise _assignment_not_found() from exc
 
 
 # ------------------------------------------------------------ review queue

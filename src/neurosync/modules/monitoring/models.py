@@ -11,6 +11,7 @@ and ``longitudinal_results``, the state one session reached against it. Both
 are reproducible from the stored observations; neither is a clinical score.
 """
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 
@@ -190,6 +191,10 @@ class MonitoringPlanItem(Base):
     # overrides the assessment's default duration for this item only; when
     # null the catalog default applies.
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # The rest of what the doctor set for this item, validated against the
+    # assessment's catalog parameter specs when it was written. Null means the
+    # catalog defaults apply.
+    parameters: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -289,9 +294,14 @@ class MonitoringSessionEvent(Base):
 class MonitoringResult(Base):
     """Deterministic summary of one session's recording.
 
-    Values describe the recording only (duration, tap counts, rhythm
+    Values describe the recording only (duration, movement counts, rhythm
     statistics, quality). Nothing here is a clinical score and nothing here
     diagnoses the patient.
+
+    One row holds one execution type's features. ``duration_ms`` and
+    ``longest_pause_ms`` mean the same thing for every type and are always
+    stored; the tap and canvas columns are otherwise exclusive, which a check
+    constraint enforces rather than leaving to the service layer.
     """
 
     __tablename__ = "monitoring_results"
@@ -302,6 +312,10 @@ class MonitoringResult(Base):
         ),
         CheckConstraint("total_taps >= 0", name="ck_monitoring_results_total_taps"),
         CheckConstraint("duration_ms >= 0", name="ck_monitoring_results_duration_ms"),
+        CheckConstraint(
+            "(total_taps IS NULL) <> (total_points IS NULL)",
+            name="ck_monitoring_results_single_execution_type",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -310,12 +324,21 @@ class MonitoringResult(Base):
         nullable=False,
         unique=True,
     )
-    total_taps: Mapped[int] = mapped_column(Integer, nullable=False)
+    # --- shared by every execution type ---
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False)
-    mean_inter_tap_interval_ms: Mapped[int] = mapped_column(Integer, nullable=False)
-    inter_tap_variability_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     longest_pause_ms: Mapped[int] = mapped_column(Integer, nullable=False)
-    taps_per_second: Mapped[float] = mapped_column(nullable=False)
+    # --- finger tapping ---
+    total_taps: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mean_inter_tap_interval_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    inter_tap_variability_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    taps_per_second: Mapped[float | None] = mapped_column(nullable=True)
+    # --- canvas tracing ---
+    total_points: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stroke_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    path_length: Mapped[float | None] = mapped_column(nullable=True)
+    mean_speed_px_per_second: Mapped[float | None] = mapped_column(nullable=True)
+    peak_speed_px_per_second: Mapped[float | None] = mapped_column(nullable=True)
+    path_efficiency: Mapped[float | None] = mapped_column(nullable=True)
     quality: Mapped[str] = mapped_column(String(16), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -327,6 +350,92 @@ class MonitoringResult(Base):
         return (
             f"<MonitoringResult id={self.id} session_id={self.session_id} quality={self.quality}>"
         )
+
+
+@dataclass(frozen=True, slots=True)
+class TapRecordingFeatures:
+    """The finger-tapping features of one stored result."""
+
+    total_taps: int
+    duration_ms: int
+    mean_inter_tap_interval_ms: int
+    inter_tap_variability_ms: int
+    longest_pause_ms: int
+    taps_per_second: float
+
+
+@dataclass(frozen=True, slots=True)
+class CanvasRecordingFeatures:
+    """The canvas (tracing) features of one stored result."""
+
+    total_points: int
+    stroke_count: int
+    duration_ms: int
+    longest_pause_ms: int
+    path_length: float
+    mean_speed_px_per_second: float
+    peak_speed_px_per_second: float
+    path_efficiency: float
+
+
+class MissingResultShapeError(ValueError):
+    """Raised when a stored result does not hold the shape it claims to.
+
+    The database keeps the tap and canvas column sets mutually exclusive, so a
+    null inside one of them means the row is internally inconsistent. That is a
+    fault to surface, never something to paper over with a zero: a made-up
+    value would be indistinguishable from a real recording.
+    """
+
+
+def tap_recording_features(result: MonitoringResult) -> TapRecordingFeatures:
+    """Return one result row's finger-tapping features.
+
+    Raises ``MissingResultShapeError`` for a row that is not a tap recording, so
+    a caller reading tap features can never quietly receive canvas ones.
+    """
+    if (
+        result.total_taps is None
+        or result.mean_inter_tap_interval_ms is None
+        or result.inter_tap_variability_ms is None
+        or result.taps_per_second is None
+    ):
+        raise MissingResultShapeError
+    return TapRecordingFeatures(
+        total_taps=result.total_taps,
+        duration_ms=result.duration_ms,
+        mean_inter_tap_interval_ms=result.mean_inter_tap_interval_ms,
+        inter_tap_variability_ms=result.inter_tap_variability_ms,
+        longest_pause_ms=result.longest_pause_ms,
+        taps_per_second=result.taps_per_second,
+    )
+
+
+def canvas_recording_features(result: MonitoringResult) -> CanvasRecordingFeatures:
+    """Return one result row's canvas features.
+
+    Raises ``MissingResultShapeError`` for a row that is not a canvas
+    recording.
+    """
+    if (
+        result.total_points is None
+        or result.stroke_count is None
+        or result.path_length is None
+        or result.mean_speed_px_per_second is None
+        or result.peak_speed_px_per_second is None
+        or result.path_efficiency is None
+    ):
+        raise MissingResultShapeError
+    return CanvasRecordingFeatures(
+        total_points=result.total_points,
+        stroke_count=result.stroke_count,
+        duration_ms=result.duration_ms,
+        longest_pause_ms=result.longest_pause_ms,
+        path_length=result.path_length,
+        mean_speed_px_per_second=result.mean_speed_px_per_second,
+        peak_speed_px_per_second=result.peak_speed_px_per_second,
+        path_efficiency=result.path_efficiency,
+    )
 
 
 class PatientBaseline(Base):

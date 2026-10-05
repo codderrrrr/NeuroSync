@@ -24,11 +24,16 @@ from neurosync.modules.monitoring.models import (
     AssessmentDefinition,
     LongitudinalResult,
     LongitudinalState,
+    MissingResultShapeError,
+    MonitoringResult,
     MonitoringSession,
     RecordingQuality,
+    canvas_recording_features,
+    tap_recording_features,
 )
 from neurosync.modules.monitoring.schemas import (
     AssessmentResponse,
+    CanvasResultResponse,
     CompleteSessionRequest,
     LongitudinalSummaryResponse,
     MonitoringPlanResponse,
@@ -36,6 +41,7 @@ from neurosync.modules.monitoring.schemas import (
     PatientBaselineResponse,
     SessionResultResponse,
     StartSessionRequest,
+    TapResultResponse,
 )
 
 # Catalog and plan routers are mounted separately so paths stay clear.
@@ -50,32 +56,77 @@ MAX_LIST_LIMIT = 100
 
 
 def _assessment_response(definition: AssessmentDefinition) -> AssessmentResponse:
-    return AssessmentResponse.model_validate(definition)
+    return service.assessment_response(definition)
+
+
+class IncompleteResultMessage:
+    """Detail for a stored result whose feature columns are inconsistent."""
+
+    DETAIL = "The session's recording result is incomplete."
+
+
+def _session_result_response(stored: MonitoringResult) -> SessionResultResponse:
+    """Render one stored result in the shape its runner produced.
+
+    The tap and canvas column sets are mutually exclusive in the database, so
+    which block to fill is read off the row rather than guessed from the
+    assessment.
+    """
+    quality = RecordingQuality(stored.quality)
+    try:
+        if stored.total_taps is not None:
+            taps = tap_recording_features(stored)
+            return SessionResultResponse(
+                quality=quality,
+                taps=TapResultResponse(
+                    total_taps=taps.total_taps,
+                    duration_ms=taps.duration_ms,
+                    mean_inter_tap_interval_ms=taps.mean_inter_tap_interval_ms,
+                    inter_tap_variability_ms=taps.inter_tap_variability_ms,
+                    longest_pause_ms=taps.longest_pause_ms,
+                    taps_per_second=taps.taps_per_second,
+                ),
+            )
+        if stored.total_points is not None:
+            canvas = canvas_recording_features(stored)
+            return SessionResultResponse(
+                quality=quality,
+                canvas=CanvasResultResponse(
+                    total_points=canvas.total_points,
+                    stroke_count=canvas.stroke_count,
+                    duration_ms=canvas.duration_ms,
+                    longest_pause_ms=canvas.longest_pause_ms,
+                    path_length=canvas.path_length,
+                    mean_speed_px_per_second=canvas.mean_speed_px_per_second,
+                    peak_speed_px_per_second=canvas.peak_speed_px_per_second,
+                    path_efficiency=canvas.path_efficiency,
+                ),
+            )
+    except MissingResultShapeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=IncompleteResultMessage.DETAIL,
+        ) from exc
+    # The database constraint guarantees one of the two blocks above is filled;
+    # reaching here means the constraint and this code disagree.
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=IncompleteResultMessage.DETAIL,
+    )
 
 
 def _session_response(
     monitoring_session: MonitoringSession,
     definition: AssessmentDefinition,
 ) -> MonitoringSessionResponse:
-    result: SessionResultResponse | None = None
     stored = monitoring_session.result
-    if stored is not None:
-        result = SessionResultResponse(
-            total_taps=stored.total_taps,
-            duration_ms=stored.duration_ms,
-            mean_inter_tap_interval_ms=stored.mean_inter_tap_interval_ms,
-            inter_tap_variability_ms=stored.inter_tap_variability_ms,
-            longest_pause_ms=stored.longest_pause_ms,
-            taps_per_second=stored.taps_per_second,
-            quality=RecordingQuality(stored.quality),
-        )
     return MonitoringSessionResponse(
         id=monitoring_session.id,
         status=monitoring_session.status,
         assessment=_assessment_response(definition),
         started_at=monitoring_session.started_at,
         completed_at=monitoring_session.completed_at,
-        result=result,
+        result=None if stored is None else _session_result_response(stored),
         longitudinal=_longitudinal_summary(monitoring_session.longitudinal),
     )
 
@@ -299,6 +350,16 @@ async def complete_session(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
+        ) from exc
+    except service.MedicationContextNotSupportedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=service.MedicationContextNotSupportedMessage.MESSAGE,
+        ) from exc
+    except service.UnsupportedAssessmentError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This assessment cannot be completed.",
         ) from exc
     except service.UnknownMedicationEventError as exc:
         # Another patient's dose event is indistinguishable from a missing one.

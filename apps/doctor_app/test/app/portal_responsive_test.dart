@@ -43,6 +43,9 @@ Future<http.Response> _full(http.Request request) async {
         ),
       ]);
   }
+  if (request.url.path == '/doctor/assessments') {
+    return json(assessmentCatalogJson());
+  }
   if (request.url.path.endsWith('/assignments')) {
     return json(<dynamic>[
       assignmentJson(),
@@ -230,7 +233,47 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text('Assign exercise'), findsOneWidget);
-        expect(find.text('60'), findsOneWidget);
+        // Every catalog test is offered, so the doctor picks rather than being
+        // handed the one the app decided on.
+        expect(find.text('Finger Tapping'), findsWidgets);
+        expect(find.text('Spiral Drawing'), findsOneWidget);
+        expect(find.text('Line Tracing'), findsOneWidget);
+        expect(find.text('Handwriting'), findsOneWidget);
+        // The two held-back tests are labelled as unavailable, which is what
+        // tells a doctor they cannot be picked yet.
+        expect(find.text('COMING SOON'), findsNWidgets(2));
+        // No settings editor until a test is chosen: each test declares its
+        // own, so there is nothing to show before one is picked.
+        expect(find.text('HOW THE PATIENT DOES IT'), findsNothing);
+
+        await tester.tap(find.text('Line Tracing'));
+        await tester.pumpAndSettle();
+
+        // Picking one reveals that test's own settings, rendered from the
+        // catalog. They sit below the fold, so the list is scrolled first.
+        expect(tester.takeException(), isNull);
+        // The recording length starts at this test's catalog default.
+        expect(find.text('30'), findsOneWidget);
+        await tester.dragUntilVisible(
+          find.text('HOW THE PATIENT DOES IT'),
+          find.byType(Scrollable).last,
+          const Offset(0, -120),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('HOW THE PATIENT DOES IT'), findsOneWidget);
+        expect(find.text('Speed'), findsOneWidget);
+        expect(find.text('Repetitions'), findsOneWidget);
+        expect(find.text('Line length'), findsOneWidget);
+
+        // The submit row is the last thing on the page; it is below the fold
+        // at every width, so the list is scrolled to the end.
+        await tester.dragUntilVisible(
+          find.text('Assign'),
+          find.byType(Scrollable).last,
+          const Offset(0, -120),
+        );
+        await tester.pumpAndSettle();
         expect(find.text('Assign'), findsOneWidget);
       });
     }

@@ -67,7 +67,9 @@ class SessionResultScreen extends StatelessWidget {
       case RecordingQuality.invalid:
         return 'The recording ran too long to be compared with others.';
       case RecordingQuality.incomplete:
-        return 'The recording ended before enough tapping was captured.';
+        return result.taps != null
+            ? 'The recording ended before enough tapping was captured.'
+            : 'The recording ended before the whole test was drawn.';
     }
   }
 
@@ -134,14 +136,15 @@ class SessionResultScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            // Two facts carry the session; the rhythm statistics below are
-            // supporting detail rather than the headline.
+            // Two facts carry the session; the statistics below are supporting
+            // detail rather than the headline.
             Row(
               children: <Widget>[
                 Expanded(
                   child: _HeadlineStat(
-                    label: 'TAPS RECORDED',
-                    value: '${result.totalTaps}',
+                    label:
+                        result.taps != null ? 'TAPS RECORDED' : 'PASSES DRAWN',
+                    value: '${result.movementCount}',
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -159,24 +162,43 @@ class SessionResultScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 children: <Widget>[
-                  _ResultRow(
-                    label: 'Mean interval',
-                    value: '${result.meanInterTapIntervalMs} ms',
-                  ),
-                  const Divider(indent: 18, endIndent: 18),
-                  _ResultRow(
-                    label: 'Variability',
-                    value: '\u00b1${result.interTapVariabilityMs} ms',
-                  ),
+                  if (result.taps != null) ...<Widget>[
+                    _ResultRow(
+                      label: 'Mean interval',
+                      value: '${result.taps!.meanInterTapIntervalMs} ms',
+                    ),
+                    const Divider(indent: 18, endIndent: 18),
+                    _ResultRow(
+                      label: 'Variability',
+                      value: '\u00b1${result.taps!.interTapVariabilityMs} ms',
+                    ),
+                    const Divider(indent: 18, endIndent: 18),
+                    _ResultRow(
+                      label: 'Tapping rate',
+                      value:
+                          '${result.taps!.tapsPerSecond.toStringAsFixed(1)} /s',
+                    ),
+                  ] else ...<Widget>[
+                    _ResultRow(
+                      label: 'Points recorded',
+                      value: '${result.canvas!.totalPoints}',
+                    ),
+                    const Divider(indent: 18, endIndent: 18),
+                    _ResultRow(
+                      label: 'Path length',
+                      value: '${result.canvas!.pathLength.round()} px',
+                    ),
+                    const Divider(indent: 18, endIndent: 18),
+                    _ResultRow(
+                      label: 'Average speed',
+                      value:
+                          '${result.canvas!.meanSpeedPxPerSecond.round()} px/s',
+                    ),
+                  ],
                   const Divider(indent: 18, endIndent: 18),
                   _ResultRow(
                     label: 'Longest pause',
                     value: '${result.longestPauseMs} ms',
-                  ),
-                  const Divider(indent: 18, endIndent: 18),
-                  _ResultRow(
-                    label: 'Tapping rate',
-                    value: '${result.tapsPerSecond.toStringAsFixed(1)} /s',
                   ),
                 ],
               ),

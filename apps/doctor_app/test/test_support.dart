@@ -58,15 +58,152 @@ Map<String, dynamic> assignmentJson({
   int id = 77,
   String title = 'Finger Tapping',
   int durationSeconds = 60,
+  String assessmentSlug = 'finger_tapping',
+  String assessmentTitle = 'Finger Tapping',
+  String status = 'active',
+  Map<String, Object>? parameters,
 }) =>
     <String, dynamic>{
       'id': id,
       'title': title,
-      'status': 'active',
+      'status': status,
       'created_at': '2026-09-30T10:30:00Z',
-      'assessment_title': 'Finger Tapping',
+      'updated_at': '2026-09-30T10:30:00Z',
+      'assessment_slug': assessmentSlug,
+      'assessment_title': assessmentTitle,
       'duration_seconds': durationSeconds,
+      'parameters': parameters ??
+          <String, Object>{
+            'hand': 'right',
+            'finger': 'index',
+            'pacing': 'comfortable'
+          },
     };
+
+/// A catalog entry, shaped exactly as `GET /doctor/assessments` returns it.
+Map<String, dynamic> assessmentJson({
+  int id = 1,
+  String slug = 'finger_tapping',
+  String title = 'Finger Tapping',
+  String executionType = 'tap_task',
+  bool isSupported = true,
+  List<Map<String, Object>> parameters = const <Map<String, Object>>[],
+}) =>
+    <String, dynamic>{
+      'id': id,
+      'slug': slug,
+      'title': title,
+      'description': 'Tap as regularly as you can.',
+      'instructions': 'Tap the pad with the finger indicated on screen.',
+      'execution_type': executionType,
+      'default_duration_seconds': 30,
+      'is_supported': isSupported,
+      'parameters': parameters,
+    };
+
+Map<String, Object> choiceParameter(
+  String key,
+  String label,
+  Object defaultValue,
+  List<String> choices,
+) =>
+    <String, Object>{
+      'key': key,
+      'label': label,
+      'kind': 'choice',
+      'default': defaultValue,
+      'choices': choices,
+      'help_text': 'How $label.toLowerCase() is set.',
+    };
+
+Map<String, Object> integerParameter(
+  String key,
+  String label,
+  int defaultValue,
+  int minimum,
+  int maximum,
+) =>
+    <String, Object>{
+      'key': key,
+      'label': label,
+      'kind': 'integer',
+      'default': defaultValue,
+      'minimum': minimum,
+      'maximum': maximum,
+      'help_text': 'How $label.toLowerCase() is set.',
+    };
+
+Map<String, Object> textParameter(
+  String key,
+  String label,
+  String defaultValue,
+  int maxLength,
+) =>
+    <String, Object>{
+      'key': key,
+      'label': label,
+      'kind': 'text',
+      'default': defaultValue,
+      'max_length': maxLength,
+      'help_text': 'How $label.toLowerCase() is set.',
+    };
+
+/// The four catalog entries, as the backend seeds them.
+List<Map<String, dynamic>> assessmentCatalogJson() => <Map<String, dynamic>>[
+      assessmentJson(
+        id: 1,
+        slug: 'finger_tapping',
+        title: 'Finger Tapping',
+        parameters: <Map<String, Object>>[
+          choiceParameter('hand', 'Hand', 'right', <String>['left', 'right']),
+          choiceParameter('finger', 'Finger', 'index',
+              <String>['thumb', 'index', 'middle', 'ring', 'little']),
+          choiceParameter('pacing', 'Speed', 'comfortable',
+              <String>['slow', 'comfortable', 'fast']),
+        ],
+      ),
+      assessmentJson(
+        id: 2,
+        slug: 'spiral_drawing',
+        title: 'Spiral Drawing',
+        executionType: 'canvas_task',
+        // Held back by the backend until its guide is good enough to ask a
+        // patient to use. The fixture mirrors the API so the app is tested
+        // against the catalog doctors actually get.
+        isSupported: false,
+        parameters: <Map<String, Object>>[
+          choiceParameter('pacing', 'Speed', 'comfortable',
+              <String>['slow', 'comfortable', 'fast']),
+          integerParameter('turns', 'Turns', 2, 1, 6),
+          integerParameter('size_percent', 'Spiral size', 70, 40, 100),
+        ],
+      ),
+      assessmentJson(
+        id: 3,
+        slug: 'line_tracing',
+        title: 'Line Tracing',
+        executionType: 'canvas_task',
+        parameters: <Map<String, Object>>[
+          choiceParameter('pacing', 'Speed', 'comfortable',
+              <String>['slow', 'comfortable', 'fast']),
+          integerParameter('repetitions', 'Repetitions', 3, 1, 10),
+          integerParameter('line_length_percent', 'Line length', 70, 30, 100),
+        ],
+      ),
+      assessmentJson(
+        id: 4,
+        slug: 'handwriting',
+        title: 'Handwriting',
+        executionType: 'canvas_task',
+        isSupported: false,
+        parameters: <Map<String, Object>>[
+          choiceParameter('pacing', 'Speed', 'comfortable',
+              <String>['slow', 'comfortable', 'fast']),
+          textParameter('phrase', 'Phrase', 'NeuroSync', 60),
+          integerParameter('repetitions', 'Repetitions', 1, 1, 5),
+        ],
+      ),
+    ];
 
 Map<String, dynamic> exceptionSummaryJson({
   int id = 7,
