@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Small in-app back affordance, styled like the patient app's.
+/// Small in-app back affordance.
 class BackLabel extends StatelessWidget {
-  const BackLabel({super.key, this.label = 'Dashboard'});
+  const BackLabel({super.key, this.label = 'Back'});
 
   final String label;
 

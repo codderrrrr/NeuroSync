@@ -8,6 +8,7 @@ import '../models/check_in.dart';
 import '../state/check_in_controller.dart';
 import '../../monitoring/state/monitoring_controller.dart';
 import 'new_check_in_screen.dart';
+import '../../../core/widgets/empty_card.dart';
 
 /// The check-ins tab: record a new check-in and browse past ones.
 class CheckInsScreen extends StatefulWidget {
@@ -93,21 +94,10 @@ class _CheckInsScreenState extends State<CheckInsScreen> {
       ];
     }
     if (controller.checkIns.isEmpty) {
-      return <Widget>[
-        const AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'No check-ins yet',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 6),
-              MutedText(
-                'Record how you feel right now to start your history.',
-              ),
-            ],
-          ),
+      return const <Widget>[
+        EmptyCard(
+          title: 'No check-ins yet',
+          message: 'Record how you feel right now to start your history.',
         ),
       ];
     }

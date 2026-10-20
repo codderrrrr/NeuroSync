@@ -202,7 +202,7 @@ class _PreparationView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
       children: <Widget>[
-        const BackLabel(),
+        const BackLabel(label: 'Home'),
         const SizedBox(height: 8),
         LargeTitle(title),
         const SizedBox(height: 6),
@@ -368,23 +368,6 @@ class _RecordingView extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Small in-app back affordance for the preparation view.
-class BackLabel extends StatelessWidget {
-  const BackLabel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: TextButton.icon(
-        onPressed: () => Navigator.of(context).maybePop(),
-        icon: const Icon(Icons.arrow_back_ios_new, size: 16),
-        label: const Text('Home'),
-      ),
     );
   }
 }

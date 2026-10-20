@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../core/formatting/date_format.dart';
+import '../../../core/widgets/empty_card.dart';
 import '../models/doctor_link.dart';
 import '../state/doctor_link_controller.dart';
 import 'status_chip.dart';
@@ -27,24 +28,9 @@ class DoctorLinkList extends StatelessWidget {
     }
 
     if (controller.links.isEmpty) {
-      return AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'No doctors linked yet',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const MutedText(
-              'Enter the code your doctor gave you to request a link.',
-            ),
-          ],
-        ),
+      return const EmptyCard(
+        title: 'No doctors linked yet',
+        message: 'Enter the code your doctor gave you to request a link.',
       );
     }
 

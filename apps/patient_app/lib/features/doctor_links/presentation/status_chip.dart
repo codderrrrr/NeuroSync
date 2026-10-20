@@ -17,21 +17,6 @@ class StatusChip extends StatelessWidget {
     final Color color = isActive ? AppTheme.active : AppTheme.pending;
     final Color tint = isActive ? AppTheme.activeTint : AppTheme.pendingTint;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: tint,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: color,
-          letterSpacing: 0.6,
-        ),
-      ),
-    );
+    return StatusTag(label: status.label, color: color, tint: tint);
   }
 }

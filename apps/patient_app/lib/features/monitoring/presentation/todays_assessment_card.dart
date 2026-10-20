@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:neurosync_core/neurosync_core.dart';
 
 import '../models/monitoring_plan.dart';
+import '../../../core/widgets/empty_card.dart';
 
 /// The Home screen's monitoring card.
 ///
@@ -53,21 +54,10 @@ class TodaysAssessmentCard extends StatelessWidget {
 
     final MonitoringPlan? activePlan = plan;
     if (activePlan == null) {
-      return const AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'No monitoring plan yet',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 6),
-            MutedText(
-              'When your doctor sets up a monitoring plan, your next motor '
-              'test will appear here.',
-            ),
-          ],
-        ),
+      return const EmptyCard(
+        title: 'No monitoring plan yet',
+        message: 'When your doctor sets up a monitoring plan, your next motor '
+            'test will appear here.',
       );
     }
 
