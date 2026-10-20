@@ -85,110 +85,72 @@ class MonitoringError(Exception):
 
 
 class UnsupportedAssessmentError(MonitoringError):
-    """Raised when an assessment that is not being handed out would become a task.
+    """Raised when an assessment that is not being handed out would become a task."""
 
-    ``is_supported`` is false both for a test with no runner yet and for one
-    deliberately held back, and neither may reach a patient.
-    """
-
-
-class PlanNeedsAssessmentsMessage:
-    """Message for plans created without any assessment."""
-
-    MESSAGE = "A monitoring plan needs at least one assessment."
-
-
-class UnknownAssessmentsMessage:
-    """Message for plans referencing assessments outside the catalog."""
-
-    @staticmethod
-    def for_ids(definition_ids: list[int]) -> str:
-        return f"Unknown assessment definition ids: {definition_ids}"
-
-
-class UnassignableAssessmentsMessage:
-    """Message for assessments a plan may not contain."""
-
-    @staticmethod
-    def for_slugs(slugs: list[str]) -> str:
-        return f"Assessments that are not being handed out cannot be assigned: {slugs}"
-
-
-class MissingDefinitionMessage:
-    """Message for a session whose assessment definition vanished."""
-
-    MESSAGE = "The session's assessment definition is missing."
-
-
-class MissingPlanItemMessage:
-    """Message for a session whose plan item vanished."""
-
-    MESSAGE = "The session's monitoring plan item is missing."
-
-
-class MissingResultMessage:
-    """Message for a completed session that has no stored result."""
-
-    MESSAGE = "The session's recording result is missing."
+    def __init__(self, slug: str):
+        self.slug = slug
+        super().__init__(f"Assessment {slug} is not being handed out.")
 
 
 class PlanNotFoundError(MonitoringError):
     """Raised when the patient has no active monitoring plan."""
 
+    MESSAGE = "No active monitoring plan found."
+
 
 class PlanItemNotFoundError(MonitoringError):
     """Raised when a plan item does not exist for this patient."""
+
+    pass
 
 
 class InactiveSessionError(MonitoringError):
     """Raised when completing a session that is not in progress."""
 
+    pass
+
 
 class SessionNotFoundError(MonitoringError):
     """Raised when a session does not exist for this patient."""
+
+    pass
 
 
 class InvalidEventDataError(MonitoringError):
     """Raised when a session's event stream is not a valid recording."""
 
-
-class MissingCanvasCoordinatesMessage:
-    """Message for a canvas event whose payload has no usable coordinate."""
-
-    MESSAGE = "Canvas events must carry numeric 'x' and 'y' values."
-
-
-class MedicationContextNotSupportedMessage:
-    """Message for a dose reported against an assessment that cannot use it.
-
-    A canvas recording has no longitudinal comparison yet, so there is nothing
-    for the dose timing to be supporting context for. Rejecting the report is
-    honest; accepting and dropping it would read as the patient declining to
-    give their medication, which is the opposite of what happened.
-    """
-
-    MESSAGE = "Medication context is recorded for assessments that have a longitudinal comparison."
-
-
-class UnknownExecutionTypeMessage:
-    """Message for a catalog entry whose execution type no runner implements."""
-
-    @staticmethod
-    def for_value(execution_type: str) -> str:
-        return f"No runner is implemented for execution type {execution_type!r}."
+    pass
 
 
 class UnknownMedicationEventError(MonitoringError):
-    """Raised when a session references a dose event the patient does not own.
+    """Raised when a session references a dose event the patient does not own."""
 
-    Surfacing this instead of silently dropping the context keeps the
-    ownership boundary honest: another patient's event must not quietly
-    become "no medication information" for this session.
-    """
+    pass
 
 
 class MedicationContextNotSupportedError(MonitoringError):
     """Raised when a dose is reported for an assessment that cannot use it."""
+
+    MESSAGE = "Medication context is recorded for assessments that have a longitudinal comparison."
+
+
+# Error message constants (replaces message classes)
+ERR_PLAN_NEEDS_ASSESSMENTS = "A monitoring plan needs at least one assessment."
+ERR_UNKNOWN_ASSESSMENTS = "Unknown assessment definition ids: {ids}"
+ERR_UNASSIGNABLE_ASSESSMENTS = (
+    "Assessments that are not being handed out cannot be assigned: {slugs}"
+)
+ERR_MISSING_DEFINITION = "The session's assessment definition is missing."
+ERR_MISSING_PLAN_ITEM = "The session's monitoring plan item is missing."
+ERR_MISSING_RESULT = "The session's recording result is missing."
+ERR_NON_MONOTONIC_OFFSETS = "Event offsets must be non-decreasing."
+ERR_NON_TAP_RECORDING = "Only finger-tapping recordings take part in longitudinal comparison."
+ERR_MISSING_CANVAS_COORDS = "Canvas events must carry numeric 'x' and 'y' values."
+ERR_UNKNOWN_EXECUTION_TYPE = "No runner is implemented for execution type {type}."
+ERR_MEDICATION_CONTEXT_NOT_SUPPORTED = (
+    "Medication context is recorded for assessments that have a "
+    "longitudinal comparison."
+)
 
 
 def _utc_today_start() -> datetime:
@@ -313,7 +275,7 @@ async def create_plan(  # noqa: PLR0913 - explicit arguments beat a config objec
     catalog specs by the API boundary.
     """
     if not assessment_definition_ids:
-        raise MonitoringError(PlanNeedsAssessmentsMessage.MESSAGE)
+        raise MonitoringError(ERR_PLAN_NEEDS_ASSESSMENTS)
 
     definitions = list(
         await session.scalars(
@@ -327,7 +289,7 @@ async def create_plan(  # noqa: PLR0913 - explicit arguments beat a config objec
         definition_id for definition_id in assessment_definition_ids if definition_id not in by_id
     ]
     if missing:
-        raise PlanItemNotFoundError(UnknownAssessmentsMessage.for_ids(missing))
+        raise PlanItemNotFoundError(ERR_UNKNOWN_ASSESSMENTS.format(ids=missing))
 
     unsupported = [
         definition.slug
@@ -335,7 +297,7 @@ async def create_plan(  # noqa: PLR0913 - explicit arguments beat a config objec
         if not (definition := by_id[definition_id]).is_supported
     ]
     if unsupported:
-        raise UnsupportedAssessmentError(UnassignableAssessmentsMessage.for_slugs(unsupported))
+        raise UnsupportedAssessmentError(ERR_UNASSIGNABLE_ASSESSMENTS.format(slugs=unsupported))
 
     plan = MonitoringPlan(
         patient_id=patient_id,
@@ -483,7 +445,7 @@ async def start_session(
         # assigned it, and the patient must not be able to open a session for a
         # task NeuroSync has decided not to hand out.
         raise UnsupportedAssessmentError(
-            UnassignableAssessmentsMessage.for_slugs([str(item.assessment_definition_id)])
+            ERR_UNASSIGNABLE_ASSESSMENTS.format(slugs=[str(item.assessment_definition_id)])
         )
 
     monitoring_session = MonitoringSession(
@@ -519,7 +481,7 @@ def _to_tap_offsets(events: list[TapEventRequest]) -> list[int]:
     except ValueError as exc:
         raise InvalidEventDataError(str(exc)) from exc
     if sorted(offsets) != offsets:
-        raise InvalidEventDataError(NonMonotonicOffsetsMessage.MESSAGE)
+        raise InvalidEventDataError(ERR_NON_MONOTONIC_OFFSETS)
     return offsets
 
 
@@ -551,11 +513,11 @@ def _observation_from_row(monitoring_session: MonitoringSession) -> Observation:
     """
     result = monitoring_session.result
     if result is None:
-        raise MonitoringError(MissingResultMessage.MESSAGE)
+        raise MonitoringError(ERR_MISSING_RESULT)
     try:
         taps = tap_recording_features(result)
     except MissingResultShapeError as exc:
-        raise MonitoringError(NonTapRecordingMessage.MESSAGE) from exc
+        raise MonitoringError(ERR_NON_TAP_RECORDING) from exc
     longitudinal = monitoring_session.longitudinal
     return Observation(
         session_id=monitoring_session.id,
@@ -955,10 +917,10 @@ async def complete_session(
         monitoring_session.assessment_definition_id,
     )
     if definition is None:
-        raise MonitoringError(MissingDefinitionMessage.MESSAGE)
+        raise MonitoringError(ERR_MISSING_DEFINITION)
     item = await session.get(MonitoringPlanItem, monitoring_session.plan_item_id)
     if item is None:
-        raise MonitoringError(MissingPlanItemMessage.MESSAGE)
+        raise MonitoringError(ERR_MISSING_PLAN_ITEM)
     # Judge the recording against the duration the plan actually asked for, not
     # the catalog default: a patient who complies with a longer assignment must
     # not be recorded as `invalid` for running past the shorter default.
@@ -994,7 +956,7 @@ def _execution_type_of(definition: AssessmentDefinition) -> ExecutionType:
         return ExecutionType(definition.execution_type)
     except ValueError as exc:
         raise UnsupportedAssessmentError(
-            UnknownExecutionTypeMessage.for_value(definition.execution_type)
+            ERR_UNKNOWN_EXECUTION_TYPE.format(type=definition.execution_type)
         ) from exc
 
 
@@ -1109,7 +1071,7 @@ async def _complete_canvas_session(  # noqa: PLR0913 - explicit arguments beat a
 
     offsets = [point.offset_ms for stroke in strokes for point in stroke]
     if sorted(offsets) != offsets:
-        raise InvalidEventDataError(NonMonotonicOffsetsMessage.MESSAGE)
+        raise InvalidEventDataError(ERR_NON_MONOTONIC_OFFSETS)
 
     features = extract_canvas_features(strokes)
     spec = get_spec(definition.slug)

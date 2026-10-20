@@ -78,12 +78,7 @@ class PatientLinkNotFoundError(DoctorLinkError):
     """Raised when a link does not exist for this doctor."""
 
 
-class MissingLinkedPatientMessage:
-    """Message for a link whose patient account has vanished."""
-
-    @staticmethod
-    def for_id(patient_id: int) -> str:
-        return f"Linked patient {patient_id} is missing."
+ERR_MISSING_LINKED_PATIENT = "Linked patient {patient_id} is missing."
 
 
 def _now() -> datetime:
@@ -409,7 +404,7 @@ async def _patient_name(session: AsyncSession, patient_id: int) -> str:
     """Return a patient's name, failing loudly if the account vanished."""
     name = await session.scalar(select(Patient.name).where(Patient.id == patient_id))
     if name is None:
-        raise DoctorLinkError(MissingLinkedPatientMessage.for_id(patient_id))
+        raise DoctorLinkError(ERR_MISSING_LINKED_PATIENT.format(patient_id=patient_id))
     return name
 
 
@@ -497,7 +492,7 @@ async def create_assignment(  # noqa: PLR0913 - explicit arguments beat a config
     )
     if definition is None or not definition.is_supported:
         raise monitoring_service.UnsupportedAssessmentError(
-            monitoring_service.UnassignableAssessmentsMessage.for_slugs([assessment_slug])
+            monitoring_service.ERR_UNASSIGNABLE_ASSESSMENTS.format(slugs=[assessment_slug])
         )
 
     plan = await monitoring_service.create_plan(
@@ -530,7 +525,7 @@ async def _first_item(session: AsyncSession, plan_id: int) -> MonitoringPlanItem
         .limit(1)
     )
     if item is None:
-        raise monitoring_service.MonitoringError(monitoring_service.MissingPlanItemMessage.MESSAGE)
+        raise monitoring_service.MonitoringError(monitoring_service.ERR_MISSING_PLAN_ITEM)
     return item
 
 
@@ -617,7 +612,7 @@ async def update_assignment(  # noqa: PLR0913 - explicit arguments beat a config
         # Checked after the archived test above: an exercise the doctor removed
         # reads as missing whatever test it was built on.
         raise monitoring_service.UnsupportedAssessmentError(
-            monitoring_service.UnassignableAssessmentsMessage.for_slugs([definition.slug])
+            monitoring_service.ERR_UNASSIGNABLE_ASSESSMENTS.format(slugs=[definition.slug])
         )
 
     if title is not None:

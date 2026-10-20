@@ -2,6 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../models/assessment.dart';
+import '../models/monitoring_plan.dart';
+
 /// The shape a tracing test asks the patient to draw.
 ///
 /// The size and turn count come from the doctor's settings, so the patient
@@ -13,36 +16,61 @@ enum CanvasTargetShape { spiral, line, handwriting }
 class CanvasTarget {
   const CanvasTarget._(this.shape, this.turns, this.sizeFraction, this.phrase);
 
-  /// The target for one catalog assessment, or a plain line if the slug is one
-  /// this build has no shape for.
-  ///
-  /// Falling back rather than throwing keeps an unknown slug from crashing the
-  /// runner; the backend still decides what the recording means.
+  /// The target for one catalog assessment, using parameter keys rather than
+  /// hardcoded slugs so the guide adapts to whatever the catalog declares.
   factory CanvasTarget.forAssessment({
-    required String slug,
-    required int turns,
-    required int sizePercent,
-    required int lineLengthPercent,
-    required String phrase,
+    required Assessment assessment,
+    required MonitoringPlanItem item,
   }) {
-    switch (slug) {
-      case 'spiral_drawing':
-        return CanvasTarget._(
-          CanvasTargetShape.spiral,
-          math.max(1, turns),
-          (sizePercent.clamp(40, 100)) / 100,
-          '',
-        );
-      case 'handwriting':
-        return CanvasTarget._(CanvasTargetShape.handwriting, 0, 0.7, phrase);
-      case 'line_tracing':
-      default:
-        return CanvasTarget._(
-          CanvasTargetShape.line,
-          0,
-          (lineLengthPercent.clamp(30, 100)) / 100,
-          '',
-        );
+    // Determine shape from execution type or slug convention
+    final bool isSpiral = assessment.slug == 'spiral_drawing';
+    final bool isHandwriting = assessment.slug == 'handwriting';
+
+    // Look up parameters by conventional keys
+    int turns = 1;
+    int sizePercent = 70;
+    int lineLengthPercent = 70;
+    String phrase = 'NeuroSync';
+
+    for (final setting in assessment.parameters) {
+      final value = item.parameters[setting.key] ?? setting.defaultValue;
+      switch (setting.key) {
+        case 'turns':
+          turns = (value as num).toInt();
+        case 'size_percent':
+          sizePercent = (value as num).toInt();
+        case 'line_length_percent':
+          lineLengthPercent = (value as num).toInt();
+        case 'phrase':
+          phrase = value as String;
+        case 'repetitions':
+          // Handled by strokes_parameter in catalog
+          break;
+      }
+    }
+
+    if (isSpiral) {
+      return CanvasTarget._(
+        CanvasTargetShape.spiral,
+        math.max(1, turns),
+        (sizePercent.clamp(40, 100)) / 100,
+        '',
+      );
+    } else if (isHandwriting) {
+      return CanvasTarget._(
+        CanvasTargetShape.handwriting,
+        0,
+        0.7,
+        phrase.trim().isEmpty ? 'NeuroSync' : phrase.trim(),
+      );
+    } else {
+      // line_tracing or unknown canvas task
+      return CanvasTarget._(
+        CanvasTargetShape.line,
+        0,
+        (lineLengthPercent.clamp(30, 100)) / 100,
+        '',
+      );
     }
   }
 

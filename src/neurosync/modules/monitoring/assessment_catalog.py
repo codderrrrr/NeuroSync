@@ -22,7 +22,7 @@ tasks, never any wording, scoring, or copyrighted content.
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 
@@ -50,6 +50,10 @@ class ParameterSpec:
     the values of a choice parameter; ``max_length`` bounds a text parameter.
     Exactly the fields the matching ``kind`` needs are set, and validation
     below rejects anything that does not fit.
+
+    ``choice_labels`` provides human-readable labels for choice values
+    (e.g., {"left": "Left hand"}). ``value_format`` is a format string
+    for displaying the value (e.g., "{value}%", "{value} time(s)").
     """
 
     key: str
@@ -61,6 +65,8 @@ class ParameterSpec:
     choices: tuple[str, ...] = ()
     max_length: int | None = None
     help_text: str = ""
+    choice_labels: dict[str, str] = field(default_factory=dict)
+    value_format: str | None = None
 
 
 class ParameterValidationError(ValueError):
@@ -144,6 +150,12 @@ def _pacing() -> ParameterSpec:
         default="comfortable",
         choices=("slow", "comfortable", "fast"),
         help_text="How quickly the patient should move during the test.",
+        choice_labels={
+            "slow": "Slow",
+            "comfortable": "Comfortable",
+            "fast": "Fast",
+        },
+        value_format="{value}",
     )
 
 
@@ -157,6 +169,7 @@ def _repetitions(label: str, *, default: int, minimum: int, maximum: int) -> Par
         minimum=minimum,
         maximum=maximum,
         help_text="How many separate times the patient completes the shape.",
+        value_format="{value} time(s)",
     )
 
 
@@ -190,6 +203,11 @@ ASSESSMENT_CATALOG: tuple[AssessmentSpec, ...] = (
                 default="right",
                 choices=("left", "right"),
                 help_text="Which hand the patient taps with.",
+                choice_labels={
+                    "left": "Left hand",
+                    "right": "Right hand",
+                },
+                value_format="{value} hand",
             ),
             ParameterSpec(
                 key="finger",
@@ -198,6 +216,14 @@ ASSESSMENT_CATALOG: tuple[AssessmentSpec, ...] = (
                 default="index",
                 choices=("thumb", "index", "middle", "ring", "little"),
                 help_text="Which finger the patient taps with.",
+                choice_labels={
+                    "thumb": "Thumb",
+                    "index": "Index",
+                    "middle": "Middle",
+                    "ring": "Ring",
+                    "little": "Little",
+                },
+                value_format="{value} finger",
             ),
             _pacing(),
         ),
@@ -226,6 +252,7 @@ ASSESSMENT_CATALOG: tuple[AssessmentSpec, ...] = (
                 minimum=1,
                 maximum=6,
                 help_text="How many full turns of the spiral to trace.",
+                value_format="{value} turn(s)",
             ),
             ParameterSpec(
                 key="size_percent",
@@ -235,6 +262,7 @@ ASSESSMENT_CATALOG: tuple[AssessmentSpec, ...] = (
                 minimum=40,
                 maximum=100,
                 help_text="How large the spiral is on screen, as a percentage.",
+                value_format="{value}% of screen",
             ),
         ),
     ),
@@ -263,6 +291,7 @@ ASSESSMENT_CATALOG: tuple[AssessmentSpec, ...] = (
                 minimum=30,
                 maximum=100,
                 help_text="How long the line is on screen, as a percentage.",
+                value_format="{value}% of screen",
             ),
         ),
         strokes_parameter="repetitions",
@@ -290,6 +319,7 @@ ASSESSMENT_CATALOG: tuple[AssessmentSpec, ...] = (
                 default="NeuroSync",
                 max_length=60,
                 help_text="The words the patient writes on screen.",
+                value_format='"{value}"',
             ),
             _repetitions("Repetitions", default=1, minimum=1, maximum=5),
         ),

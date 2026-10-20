@@ -252,11 +252,8 @@ class _CanvasRunnerScreenState extends State<CanvasRunnerScreen> {
                   strokes: _strokes,
                   pointCount: _pointCount,
                   target: CanvasTarget.forAssessment(
-                    slug: item.assessment.slug,
-                    turns: item.turns,
-                    sizePercent: item.spiralSizePercent,
-                    lineLengthPercent: item.lineLengthPercent,
-                    phrase: item.phrase,
+                    assessment: item.assessment,
+                    item: item,
                   ),
                   isSubmitting: _isSubmitting,
                   onStrokeStart: _onStrokeStart,

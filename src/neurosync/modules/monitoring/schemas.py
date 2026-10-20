@@ -41,6 +41,15 @@ EVENT_TYPE_DESCRIPTION = (
 )
 
 
+# Error message constants
+ERR_UNSUPPORTED_EVENT_TYPE = "Unsupported event type: {type!r}"
+ERR_MISSING_CANVAS_COORDS = "Canvas events must carry numeric 'x' and 'y' values."
+ERR_STROKE_START_INSIDE = "A stroke started before the previous one ended."
+ERR_STROKE_POINT_OUTSIDE = "A stroke point arrived outside a stroke."
+ERR_STROKE_END_OUTSIDE = "A stroke ended without being started."
+ERR_STROKE_UNCLOSED = "The recording ended while a stroke was still open."
+
+
 class ParameterSpecResponse(BaseModel):
     """One doctor-settable value, described so a client can edit it."""
 
@@ -53,6 +62,8 @@ class ParameterSpecResponse(BaseModel):
     choices: list[str] = Field(default_factory=list)
     max_length: int | None = None
     help_text: str = ""
+    choice_labels: dict[str, str] = Field(default_factory=dict)
+    value_format: str | None = None
 
     @classmethod
     def from_spec(cls, spec: ParameterSpec) -> "ParameterSpecResponse":
@@ -66,6 +77,8 @@ class ParameterSpecResponse(BaseModel):
             choices=list(spec.choices),
             max_length=spec.max_length,
             help_text=spec.help_text,
+            choice_labels=spec.choice_labels,
+            value_format=spec.value_format,
         )
 
 
@@ -152,7 +165,7 @@ class TapEventRequest(BaseModel):
             x = float(payload["x"])  # type: ignore[arg-type]
             y = float(payload["y"])  # type: ignore[arg-type]
         except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError(MissingCanvasCoordinateMessage.MESSAGE) from exc
+            raise ValueError(ERR_MISSING_CANVAS_COORDS) from exc
         return CanvasPoint(offset_ms=self.offset_ms, x=x, y=y)
 
 
@@ -314,7 +327,7 @@ def event_offsets_ms(events: list[TapEventRequest]) -> list[int]:
     offsets: list[int] = []
     for event in events:
         if event.event_type not in TAP_EVENT_TYPES:
-            raise ValueError(UnsupportedEventTypeMessage.for_type(event.event_type))
+            raise ValueError(ERR_UNSUPPORTED_EVENT_TYPE.format(type=event.event_type))
         offsets.append(event.offset_ms)
     return offsets
 
@@ -332,24 +345,24 @@ def canvas_strokes(events: list[TapEventRequest]) -> list[list[CanvasPoint]]:
 
     for event in events:
         if event.event_type not in CANVAS_EVENT_TYPES:
-            raise ValueError(UnsupportedEventTypeMessage.for_type(event.event_type))
+            raise ValueError(ERR_UNSUPPORTED_EVENT_TYPE.format(type=event.event_type))
         point = event.point()
 
         if event.event_type == EVENT_TYPE_STROKE_START:
             if current:
-                raise ValueError(StrokeOrderMessage.START_INSIDE_STROKE)
+                raise ValueError(ERR_STROKE_START_INSIDE)
             current = [point]
         elif event.event_type == EVENT_TYPE_STROKE_POINT:
             if not current:
-                raise ValueError(StrokeOrderMessage.POINT_OUTSIDE_STROKE)
+                raise ValueError(ERR_STROKE_POINT_OUTSIDE)
             current.append(point)
         else:
             if not current:
-                raise ValueError(StrokeOrderMessage.END_OUTSIDE_STROKE)
+                raise ValueError(ERR_STROKE_END_OUTSIDE)
             current.append(point)
             strokes.append(current)
             current = []
 
     if current:
-        raise ValueError(StrokeOrderMessage.UNCLOSED_STROKE)
+        raise ValueError(ERR_STROKE_UNCLOSED)
     return strokes

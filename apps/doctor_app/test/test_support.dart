@@ -105,8 +105,10 @@ Map<String, Object> choiceParameter(
   String key,
   String label,
   Object defaultValue,
-  List<String> choices,
-) =>
+  List<String> choices, {
+  Map<String, String> choiceLabels = const <String, String>{},
+  String? valueFormat,
+}) =>
     <String, Object>{
       'key': key,
       'label': label,
@@ -114,6 +116,8 @@ Map<String, Object> choiceParameter(
       'default': defaultValue,
       'choices': choices,
       'help_text': 'How $label.toLowerCase() is set.',
+      'choice_labels': choiceLabels,
+      if (valueFormat != null) 'value_format': valueFormat,
     };
 
 Map<String, Object> integerParameter(
@@ -121,8 +125,9 @@ Map<String, Object> integerParameter(
   String label,
   int defaultValue,
   int minimum,
-  int maximum,
-) =>
+  int maximum, {
+  String? valueFormat,
+}) =>
     <String, Object>{
       'key': key,
       'label': label,
@@ -131,14 +136,17 @@ Map<String, Object> integerParameter(
       'minimum': minimum,
       'maximum': maximum,
       'help_text': 'How $label.toLowerCase() is set.',
+      'choice_labels': <String, String>{},
+      if (valueFormat != null) 'value_format': valueFormat,
     };
 
 Map<String, Object> textParameter(
   String key,
   String label,
   String defaultValue,
-  int maxLength,
-) =>
+  int maxLength, {
+  String? valueFormat,
+}) =>
     <String, Object>{
       'key': key,
       'label': label,
@@ -146,6 +154,8 @@ Map<String, Object> textParameter(
       'default': defaultValue,
       'max_length': maxLength,
       'help_text': 'How $label.toLowerCase() is set.',
+      'choice_labels': <String, String>{},
+      if (valueFormat != null) 'value_format': valueFormat,
     };
 
 /// The four catalog entries, as the backend seeds them.
@@ -155,11 +165,28 @@ List<Map<String, dynamic>> assessmentCatalogJson() => <Map<String, dynamic>>[
         slug: 'finger_tapping',
         title: 'Finger Tapping',
         parameters: <Map<String, Object>>[
-          choiceParameter('hand', 'Hand', 'right', <String>['left', 'right']),
-          choiceParameter('finger', 'Finger', 'index',
-              <String>['thumb', 'index', 'middle', 'ring', 'little']),
-          choiceParameter('pacing', 'Speed', 'comfortable',
-              <String>['slow', 'comfortable', 'fast']),
+          choiceParameter(
+            'hand', 'Hand', 'right', <String>['left', 'right'],
+            choiceLabels: <String, String>{'left': 'Left hand', 'right': 'Right hand'},
+            valueFormat: '{value} hand',
+          ),
+          choiceParameter(
+            'finger', 'Finger', 'index',
+            <String>['thumb', 'index', 'middle', 'ring', 'little'],
+            choiceLabels: <String, String>{
+              'thumb': 'Thumb', 'index': 'Index', 'middle': 'Middle',
+              'ring': 'Ring', 'little': 'Little',
+            },
+            valueFormat: '{value} finger',
+          ),
+          choiceParameter(
+            'pacing', 'Speed', 'comfortable',
+            <String>['slow', 'comfortable', 'fast'],
+            choiceLabels: <String, String>{
+              'slow': 'Slow', 'comfortable': 'Comfortable', 'fast': 'Fast',
+            },
+            valueFormat: '{value}',
+          ),
         ],
       ),
       assessmentJson(
@@ -172,10 +199,16 @@ List<Map<String, dynamic>> assessmentCatalogJson() => <Map<String, dynamic>>[
         // against the catalog doctors actually get.
         isSupported: false,
         parameters: <Map<String, Object>>[
-          choiceParameter('pacing', 'Speed', 'comfortable',
-              <String>['slow', 'comfortable', 'fast']),
-          integerParameter('turns', 'Turns', 2, 1, 6),
-          integerParameter('size_percent', 'Spiral size', 70, 40, 100),
+          choiceParameter(
+            'pacing', 'Speed', 'comfortable',
+            <String>['slow', 'comfortable', 'fast'],
+            choiceLabels: <String, String>{
+              'slow': 'Slow', 'comfortable': 'Comfortable', 'fast': 'Fast',
+            },
+            valueFormat: '{value}',
+          ),
+          integerParameter('turns', 'Turns', 2, 1, 6, valueFormat: '{value} turn(s)'),
+          integerParameter('size_percent', 'Spiral size', 70, 40, 100, valueFormat: '{value}% of screen'),
         ],
       ),
       assessmentJson(
@@ -184,10 +217,16 @@ List<Map<String, dynamic>> assessmentCatalogJson() => <Map<String, dynamic>>[
         title: 'Line Tracing',
         executionType: 'canvas_task',
         parameters: <Map<String, Object>>[
-          choiceParameter('pacing', 'Speed', 'comfortable',
-              <String>['slow', 'comfortable', 'fast']),
-          integerParameter('repetitions', 'Repetitions', 3, 1, 10),
-          integerParameter('line_length_percent', 'Line length', 70, 30, 100),
+          choiceParameter(
+            'pacing', 'Speed', 'comfortable',
+            <String>['slow', 'comfortable', 'fast'],
+            choiceLabels: <String, String>{
+              'slow': 'Slow', 'comfortable': 'Comfortable', 'fast': 'Fast',
+            },
+            valueFormat: '{value}',
+          ),
+          integerParameter('repetitions', 'Repetitions', 3, 1, 10, valueFormat: '{value} time(s)'),
+          integerParameter('line_length_percent', 'Line length', 70, 30, 100, valueFormat: '{value}% of screen'),
         ],
       ),
       assessmentJson(
@@ -197,10 +236,16 @@ List<Map<String, dynamic>> assessmentCatalogJson() => <Map<String, dynamic>>[
         executionType: 'canvas_task',
         isSupported: false,
         parameters: <Map<String, Object>>[
-          choiceParameter('pacing', 'Speed', 'comfortable',
-              <String>['slow', 'comfortable', 'fast']),
-          textParameter('phrase', 'Phrase', 'NeuroSync', 60),
-          integerParameter('repetitions', 'Repetitions', 1, 1, 5),
+          choiceParameter(
+            'pacing', 'Speed', 'comfortable',
+            <String>['slow', 'comfortable', 'fast'],
+            choiceLabels: <String, String>{
+              'slow': 'Slow', 'comfortable': 'Comfortable', 'fast': 'Fast',
+            },
+            valueFormat: '{value}',
+          ),
+          textParameter('phrase', 'Phrase', 'NeuroSync', 60, valueFormat: '"{value}"'),
+          integerParameter('repetitions', 'Repetitions', 1, 1, 5, valueFormat: '{value} time(s)'),
         ],
       ),
     ];

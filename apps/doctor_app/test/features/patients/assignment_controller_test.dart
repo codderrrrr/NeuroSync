@@ -438,9 +438,22 @@ void main() {
       );
     });
 
-    test('names a choice the way a clinician would say it', () {
-      expect(AssessmentParameter.labelForChoice('comfortable'), 'Comfortable');
-      expect(AssessmentParameter.labelForChoice('little'), 'Little');
+    test('describes a choice using API-provided labels', () {
+      final option = AssessmentOption.fromJson(
+        assessmentJson(parameters: <Map<String, Object>>[
+          choiceParameter('pacing', 'Speed', 'comfortable',
+              <String>['slow', 'comfortable', 'fast'],
+              choiceLabels: <String, String>{
+                'slow': 'Slow',
+                'comfortable': 'Comfortable',
+                'fast': 'Fast',
+              }),
+        ]),
+      );
+      final param = option.parameters.firstWhere((p) => p.key == 'pacing');
+      expect(param.describe('slow'), 'Slow');
+      expect(param.describe('comfortable'), 'Comfortable');
+      expect(param.describe('fast'), 'Fast');
     });
   });
 }

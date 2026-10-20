@@ -59,10 +59,7 @@ def _assessment_response(definition: AssessmentDefinition) -> AssessmentResponse
     return service.assessment_response(definition)
 
 
-class IncompleteResultMessage:
-    """Detail for a stored result whose feature columns are inconsistent."""
-
-    DETAIL = "The session's recording result is incomplete."
+ERR_INCOMPLETE_RESULT = "The session's recording result is incomplete."
 
 
 def _session_result_response(stored: MonitoringResult) -> SessionResultResponse:
@@ -105,13 +102,13 @@ def _session_result_response(stored: MonitoringResult) -> SessionResultResponse:
     except MissingResultShapeError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=IncompleteResultMessage.DETAIL,
+            detail=ERR_INCOMPLETE_RESULT,
         ) from exc
     # The database constraint guarantees one of the two blocks above is filled;
     # reaching here means the constraint and this code disagree.
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=IncompleteResultMessage.DETAIL,
+        detail=ERR_INCOMPLETE_RESULT,
     )
 
 
@@ -354,7 +351,7 @@ async def complete_session(
     except service.MedicationContextNotSupportedError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=service.MedicationContextNotSupportedMessage.MESSAGE,
+            detail=service.ERR_MEDICATION_CONTEXT_NOT_SUPPORTED,
         ) from exc
     except service.UnsupportedAssessmentError as exc:
         raise HTTPException(

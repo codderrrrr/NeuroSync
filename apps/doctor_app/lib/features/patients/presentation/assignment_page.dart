@@ -560,7 +560,7 @@ class _ChoiceField extends StatelessWidget {
         children: <Widget>[
           for (final String option in parameter.choices)
             _QuickChip(
-              label: AssessmentParameter.labelForChoice(option),
+              label: parameter.choiceLabels[option] ?? option,
               selected: option == value,
               onSelected: () => onChanged(option),
             ),

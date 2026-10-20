@@ -78,6 +78,8 @@ class AssessmentParameter {
     this.choices = const <String>[],
     this.maxLength,
     this.helpText = '',
+    this.choiceLabels = const <String, String>{},
+    this.valueFormat,
   });
 
   factory AssessmentParameter.fromJson(Map<String, dynamic> json) {
@@ -92,6 +94,9 @@ class AssessmentParameter {
           .cast<String>(),
       maxLength: (json['max_length'] as num?)?.toInt(),
       helpText: json['help_text'] as String? ?? '',
+      choiceLabels: (json['choice_labels'] as Map<String, dynamic>? ?? const <String, dynamic>{})
+          .map((k, v) => MapEntry(k, v as String)),
+      valueFormat: json['value_format'] as String?,
     );
   }
 
@@ -110,42 +115,32 @@ class AssessmentParameter {
   final List<String> choices;
   final int? maxLength;
   final String helpText;
+  final Map<String, String> choiceLabels;
+  final String? valueFormat;
 
   bool get isInteger => kind == kindInteger;
   bool get isChoice => kind == kindChoice;
   bool get isText => kind == kindText;
 
-  /// A readable name for a choice value, used on the chips and in summaries.
-  static String labelForChoice(String value) {
-    switch (value) {
-      case 'left':
-        return 'Left';
-      case 'right':
-        return 'Right';
-      case 'slow':
-        return 'Slow';
-      case 'comfortable':
-        return 'Comfortable';
-      case 'fast':
-        return 'Fast';
-      default:
-        final String capitalised = value.isEmpty
-            ? value
-            : '${value[0].toUpperCase()}${value.substring(1)}';
-        return capitalised;
-    }
-  }
-
   /// A readable rendering of one value, for the "what you set" summary.
-  static String describe(AssessmentParameter parameter, Object value) {
-    if (parameter.isChoice && value is String) {
-      return labelForChoice(value);
+  /// Uses API-provided choice_labels and value_format when available.
+  String describe(Object value) {
+    if (isChoice && value is String && choiceLabels.containsKey(value)) {
+      return choiceLabels[value]!;
     }
-    if (parameter.isInteger &&
-        value is int &&
-        parameter.key.endsWith('percent')) {
+    if (valueFormat != null) {
+      return valueFormat!.replaceAll('{value}', value.toString());
+    }
+    // Fallback for backward compatibility
+    if (isChoice && value is String) {
+      return _capitalize(value);
+    }
+    if (isInteger && value is int && key.endsWith('percent')) {
       return '$value%';
     }
     return '$value';
   }
+
+  static String _capitalize(String value) =>
+      value.isEmpty ? value : '${value[0].toUpperCase()}${value.substring(1)}';
 }

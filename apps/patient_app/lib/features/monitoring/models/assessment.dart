@@ -72,6 +72,8 @@ class AssessmentSetting {
     required this.kind,
     required this.defaultValue,
     this.choices = const <String>[],
+    this.choiceLabels = const <String, String>{},
+    this.valueFormat,
   });
 
   factory AssessmentSetting.fromJson(Map<String, dynamic> json) =>
@@ -82,6 +84,9 @@ class AssessmentSetting {
         defaultValue: json['default'] as Object,
         choices: (json['choices'] as List<dynamic>? ?? const <dynamic>[])
             .cast<String>(),
+        choiceLabels: (json['choice_labels'] as Map<String, dynamic>? ?? const <String, dynamic>{})
+            .map((k, v) => MapEntry(k, v as String)),
+        valueFormat: json['value_format'] as String?,
       );
 
   final String key;
@@ -89,26 +94,21 @@ class AssessmentSetting {
   final String kind;
   final Object defaultValue;
   final List<String> choices;
+  final Map<String, String> choiceLabels;
+  final String? valueFormat;
 
   /// A plain-language rendering of one value, for the "your test is set up as"
-  /// list. Unknown keys are skipped by the caller rather than shown raw, so a
-  /// setting this app does not recognise never appears as a bare identifier.
+  /// list. Uses API-provided choice_labels and value_format when available.
   String describe(Object value) {
+    if (kind == 'choice' && value is String && choiceLabels.containsKey(value)) {
+      return choiceLabels[value]!;
+    }
+    if (valueFormat != null) {
+      return valueFormat!.replaceAll('{value}', value.toString());
+    }
+    // Fallback for backward compatibility
     if (kind == 'choice' && value is String) {
-      switch (value) {
-        case 'left':
-          return 'Left hand';
-        case 'right':
-          return 'Right hand';
-        case 'slow':
-          return 'Slow';
-        case 'comfortable':
-          return 'Comfortable speed';
-        case 'fast':
-          return 'Fast';
-        default:
-          return _capitalise(value);
-      }
+      return _capitalize(value);
     }
     switch (key) {
       case 'repetitions':
@@ -121,10 +121,10 @@ class AssessmentSetting {
       case 'phrase':
         return '"$value"';
       default:
-        return _capitalise('$value');
+        return _capitalize('$value');
     }
   }
 
-  static String _capitalise(String value) =>
+  static String _capitalize(String value) =>
       value.isEmpty ? value : '${value[0].toUpperCase()}${value.substring(1)}';
 }

@@ -28,3 +28,7 @@ apps/doctor_app/web/
 .vscode/
 .idea/
 .DS_Store
+
+# Local tool artifacts
+.VSCodeCounter/
+.opencode/
