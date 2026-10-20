@@ -113,9 +113,46 @@ flutter build web --release          # doctor_app only (web portal)
 **`packages/neurosync_core` is a path dependency of both apps.** Anything
 shared between them (theme, API client, session store, sign-in controller,
 common widgets, `ApiStateController`) belongs there, not in one app. Each app
-keeps only what is its own: its screens, its endpoints, and its user model.
+keeps only what is its own: its screens, its endpoints, and the user model.
 Both apps' `pubspec.lock` files must be regenerated and committed when the
 package's dependencies change, or CI's `--enforce-lockfile` fails.
+
+### The design system
+
+The palette is a `ThemeExtension`, not a set of constants, because the same
+token has to mean two things: ink on warm ivory in the light, ink on slate in
+the dark.
+
+```dart
+final AppColors colors = AppColors.of(context);
+Text('Hello', style: TextStyle(color: colors.label))
+```
+
+- `AppColors.light` / `AppColors.dark` — the two moods, both measured for
+  WCAG AA (body text clears AAA)
+- `AppTheme.light()` / `AppTheme.dark()` — install a mood's colours
+- `AppTheme.controlHeight` (72) — a primary control; secondary is 56
+- `AppTheme.bodyLineHeight` (1.5) — body text never goes tighter
+- `ThemeController` + `ThemePrefs` — the patient's choice of mood, persisted
+  with the secure store, read before the first frame
+
+**Never hardcode a colour.** A token that is not in `AppColors` will not
+follow the mood, and one of the two moods will be wrong.
+
+The typefaces are **bundled, not fetched**: Plus Jakarta Sans carries the
+display text, Inter the body. A runtime fetch would mean the layout reflows
+once the download lands, and that a patient's data has already left the
+device to get a typeface.
+
+**Tactile controls.** A primary control in the patient app passes
+`tactile: true`. The press sinks 4% and springs back, and the haptic waits
+50ms so a tremor that grazes the control stays silent — the button still
+activates, because the haptic is feedback and swallowing a deliberate press
+would be worse than a stray tick.
+
+**A recording is not a test.** The runners show a ring that fills, not a
+counting number. A large changing digit makes the last seconds arrive as
+pressure.
 
 ## Architecture
 
