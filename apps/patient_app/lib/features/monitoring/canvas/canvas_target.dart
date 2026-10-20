@@ -104,15 +104,18 @@ class CanvasTargetPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // The guide has to be findable at a glance by an eye that is not
+    // sharp, so it is drawn heavier and less transparent than a decoration
+    // would be. A patient who cannot find the line will not start it.
     final Paint guide = Paint()
-      ..color = guideColor.withValues(alpha: 0.5)
+      ..color = guideColor.withValues(alpha: 0.85)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
+      ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
     final Paint line = Paint()
-      ..color = strokeColor.withValues(alpha: 0.7)
+      ..color = strokeColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
 
     switch (target.shape) {
@@ -147,7 +150,7 @@ class CanvasTargetPainter extends CustomPainter {
       }
     }
     canvas.drawPath(path, paint);
-    canvas.drawCircle(centre, 4, Paint()..color = paint.color);
+    canvas.drawCircle(centre, 6, Paint()..color = paint.color);
   }
 
   void _paintLine(Canvas canvas, Size size, Paint guide, Paint line) {
@@ -155,8 +158,10 @@ class CanvasTargetPainter extends CustomPainter {
     final double left = (size.width - width) / 2;
     final double y = size.height / 2;
     canvas.drawLine(Offset(left, y), Offset(left + width, y), guide);
+    // The markers are the ends of the line, so they are drawn at the size of
+    // a fingertip rather than a dot.
     for (final double x in <double>[left, left + width]) {
-      canvas.drawCircle(Offset(x, y), 9, Paint()..color = line.color);
+      canvas.drawCircle(Offset(x, y), 13, Paint()..color = line.color);
     }
   }
 

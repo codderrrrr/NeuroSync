@@ -451,39 +451,17 @@ class _RecordingView extends StatelessWidget {
                   color: scheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: <Widget>[
-                  Text(
-                    '$remainingSeconds',
-                    style: TextStyle(
-                      fontSize: 44,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.of(context).primary,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'seconds left',
-                    style:
-                        TextStyle(fontSize: 15, color: scheme.onSurfaceVariant),
-                  ),
-                ],
+              const SizedBox(height: 12),
+              // The ring fills as the recording goes on. A counting number
+              // would make the last seconds arrive as pressure, and the
+              // patient would watch the clock instead of the shape.
+              CalmProgressRing(
+                progress: progress,
+                caption: remainingSeconds > 0
+                    ? 'About $remainingSeconds seconds left'
+                    : 'Finishing',
               ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  backgroundColor: scheme.surfaceContainerHighest,
-                  color: AppColors.of(context).primary,
-                ),
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               _PassTracker(
                 completed: completedStrokes,
                 expected: expectedStrokes,

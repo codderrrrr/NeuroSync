@@ -25,6 +25,7 @@ export 'widgets/app_buttons.dart';
 export 'widgets/app_card.dart';
 export 'widgets/app_texts.dart';
 export 'widgets/back_label.dart';
+export 'widgets/calm_progress_ring.dart';
 export 'widgets/empty_state.dart';
 export 'widgets/status_tag.dart';
 export 'widgets/tactile_button.dart';
