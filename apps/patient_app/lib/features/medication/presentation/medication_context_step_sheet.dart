@@ -184,6 +184,7 @@ class _MedicationContextStepSheetState
               isLoading: _isSaving,
               onPressed:
                   _selectedMedicationId == null || _isSaving ? null : _submit,
+              tactile: true,
             ),
             const SizedBox(height: 10),
             // Always available: the recording is valid without medication

@@ -62,6 +62,7 @@ class _CheckInsScreenState extends State<CheckInsScreen> {
                 PrimaryButton(
                   label: 'Record a check-in',
                   onPressed: _openNewCheckIn,
+                  tactile: true,
                 ),
                 const SizedBox(height: 24),
                 if (controller.errorMessage != null) ...<Widget>[

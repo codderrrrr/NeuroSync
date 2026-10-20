@@ -230,6 +230,7 @@ class _PreparationView extends StatelessWidget {
           label: 'Start test',
           isLoading: isSubmitting,
           onPressed: onStart,
+          tactile: true,
         ),
         // If the recording was already captured (auto-finished) but submission
         // failed, the patient can retry sending it.

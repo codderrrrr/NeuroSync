@@ -35,6 +35,24 @@ void main() {
     expect(currentScale(tester), 1);
   });
 
+  testWidgets('sinks far enough to see through a tremor', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(child: const TactileButton(enabled: true, child: Text('Continue'))),
+    );
+
+    final TestGesture gesture =
+        await tester.startGesture(tester.getCenter(find.text('Continue')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // A 1.5% change is invisible to a hand that is not steady.
+    expect(currentScale(tester), lessThanOrEqualTo(0.96));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('drops the motion when the system asks for reduced animation',
       (WidgetTester tester) async {
     await tester.pumpWidget(
@@ -54,7 +72,9 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('reports one tick per press', (WidgetTester tester) async {
+  testWidgets('reports one tick for a press that was held', (
+    WidgetTester tester,
+  ) async {
     int ticks = 0;
     await tester.pumpWidget(
       wrap(
@@ -75,8 +95,33 @@ void main() {
     expect(ticks, 1);
   });
 
-  testWidgets('stays silent when it cannot be used',
-      (WidgetTester tester) async {
+  testWidgets('stays silent for a graze that was not a press', (
+    WidgetTester tester,
+  ) async {
+    int ticks = 0;
+    await tester.pumpWidget(
+      wrap(
+        child: TactileButton(
+          enabled: true,
+          onHaptic: () async => ticks++,
+          child: const Text('Continue'),
+        ),
+      ),
+    );
+
+    // A brush of the finger: down and up inside the threshold.
+    final TestGesture gesture =
+        await tester.startGesture(tester.getCenter(find.text('Continue')));
+    await tester.pump(const Duration(milliseconds: 20));
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(ticks, 0);
+  });
+
+  testWidgets('stays silent when it cannot be used', (
+    WidgetTester tester,
+  ) async {
     int ticks = 0;
     await tester.pumpWidget(
       wrap(

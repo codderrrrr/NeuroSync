@@ -98,6 +98,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                   label: 'Save medication',
                   isLoading: widget.controller.isSubmitting,
                   onPressed: _save,
+                  tactile: true,
                 ),
               ],
             );

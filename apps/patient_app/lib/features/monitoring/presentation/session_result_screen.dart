@@ -211,7 +211,7 @@ class SessionResultScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            PrimaryButton(label: 'Done', onPressed: onDone),
+            PrimaryButton(label: 'Done', onPressed: onDone, tactile: true),
           ],
         ),
       ),

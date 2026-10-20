@@ -123,6 +123,7 @@ class _NewCheckInScreenState extends State<NewCheckInScreen> {
                   label: 'Save check-in',
                   isLoading: controller.isSubmitting,
                   onPressed: _save,
+                  tactile: true,
                 ),
               ],
             );

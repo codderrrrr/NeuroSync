@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/intro_scale.dart';
 import 'tactile_button.dart';
 
 /// Filled primary action with an inline loading state.
@@ -49,7 +50,7 @@ class PrimaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.fieldRadius),
         ),
         textStyle: TextStyle(
-          fontSize: labelFontSize ?? 17,
+          fontSize: labelFontSize ?? IntroScale.of(context).buttonLabel,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -110,14 +111,14 @@ class SecondaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.fieldRadius),
         ),
         textStyle: TextStyle(
-          fontSize: labelFontSize ?? 17,
+          fontSize: labelFontSize ?? IntroScale.of(context).buttonLabel,
           fontWeight: FontWeight.w600,
         ),
       ),
       child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
     return SizedBox(
-      height: AppTheme.controlHeight,
+      height: AppTheme.secondaryControlHeight,
       child: tactile
           ? TactileButton(enabled: onPressed != null, child: button)
           : button,

@@ -72,6 +72,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   PrimaryButton(
                     label: 'Add your doctor',
                     onPressed: _openAddDoctor,
+                    tactile: true,
                   ),
                 ],
               ),

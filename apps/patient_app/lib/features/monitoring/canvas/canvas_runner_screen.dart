@@ -381,6 +381,7 @@ class _PreparationView extends StatelessWidget {
           label: 'Start test',
           isLoading: isSubmitting,
           onPressed: onStart,
+          tactile: true,
         ),
         const SizedBox(height: 12),
         SecondaryButton(

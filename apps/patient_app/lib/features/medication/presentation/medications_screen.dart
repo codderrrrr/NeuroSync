@@ -92,6 +92,7 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
                 PrimaryButton(
                   label: 'Add medication',
                   onPressed: _addMedication,
+                  tactile: true,
                 ),
               ],
             );

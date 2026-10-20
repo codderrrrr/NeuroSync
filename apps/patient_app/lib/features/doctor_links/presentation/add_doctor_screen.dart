@@ -90,6 +90,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                         label: 'Request to link',
                         isLoading: links.isSubmitting,
                         onPressed: _submit,
+                        tactile: true,
                       ),
                     ],
                   ),

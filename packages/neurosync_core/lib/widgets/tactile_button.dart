@@ -3,8 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// A quiet press response for the dark experience: the control sinks slightly
-/// while it is held and reports a selection tick.
+/// A press response a hand with tremor can feel and aim at.
+///
+/// The control sinks while it is held and springs back on release. The
+/// movement is deeper than a typical press because the feedback has to
+/// survive a hand that is not steady: a 1.5% change is invisible to someone
+/// with an intention tremor, 4% is not.
+///
+/// A brush of the finger is not a press. The haptic waits until the contact
+/// has lasted 50ms, so a tremor that grazes the control does not tick. The
+/// button still activates: the haptic is feedback, and swallowing a
+/// deliberate press because it was short would be worse than a stray tick.
 ///
 /// The scale is applied to the control layer only, never to content. Motion is
 /// dropped when the system asks for reduced animation; the haptic is left to
@@ -15,7 +24,7 @@ class TactileButton extends StatefulWidget {
     super.key,
     required this.enabled,
     required this.child,
-    this.onHaptic = HapticFeedback.selectionClick,
+    this.onHaptic = HapticFeedback.lightImpact,
   });
 
   final bool enabled;
@@ -24,8 +33,14 @@ class TactileButton extends StatefulWidget {
   /// Overridable so tests can count feedback without a device.
   final Future<void> Function() onHaptic;
 
-  static const double _pressedScale = 0.985;
-  static const Duration _duration = Duration(milliseconds: 110);
+  /// How far the control sinks while it is held.
+  static const double pressedScale = 0.96;
+
+  /// The spring back to the resting size.
+  static const Duration duration = Duration(milliseconds: 220);
+
+  /// How long a contact has to last before it counts as a press.
+  static const Duration pressThreshold = Duration(milliseconds: 50);
 
   @override
   State<TactileButton> createState() => _TactileButtonState();
@@ -33,16 +48,43 @@ class TactileButton extends StatefulWidget {
 
 class _TactileButtonState extends State<TactileButton> {
   bool _pressed = false;
+  Timer? _pressTimer;
 
-  void _setPressed(bool value) {
-    if (_pressed == value) {
+  @override
+  void dispose() {
+    _pressTimer?.cancel();
+    super.dispose();
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    if (!widget.enabled) {
       return;
     }
-    setState(() => _pressed = value);
-    // A control that cannot be used does not answer when it is touched.
-    if (value && widget.enabled) {
+    setState(() => _pressed = true);
+    // The tick waits for the contact to settle, so a graze is not a press.
+    _pressTimer?.cancel();
+    _pressTimer = Timer(TactileButton.pressThreshold, () {
+      if (!mounted || !_pressed) {
+        return;
+      }
       _tick();
+    });
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    _release();
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    _release();
+  }
+
+  void _release() {
+    _pressTimer?.cancel();
+    if (!_pressed) {
+      return;
     }
+    setState(() => _pressed = false);
   }
 
   void _tick() {
@@ -59,13 +101,13 @@ class _TactileButtonState extends State<TactileButton> {
     final bool active = widget.enabled && _pressed && !reduceMotion;
     return Listener(
       behavior: HitTestBehavior.translucent,
-      onPointerDown: (PointerDownEvent _) => _setPressed(true),
-      onPointerUp: (PointerUpEvent _) => _setPressed(false),
-      onPointerCancel: (PointerCancelEvent _) => _setPressed(false),
+      onPointerDown: _onPointerDown,
+      onPointerUp: _onPointerUp,
+      onPointerCancel: _onPointerCancel,
       child: AnimatedScale(
-        scale: active ? TactileButton._pressedScale : 1,
-        duration: TactileButton._duration,
-        curve: Curves.easeOut,
+        scale: active ? TactileButton.pressedScale : 1,
+        duration: TactileButton.duration,
+        curve: Curves.easeOutBack,
         child: widget.child,
       ),
     );

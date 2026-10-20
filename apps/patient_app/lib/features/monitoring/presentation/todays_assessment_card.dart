@@ -108,6 +108,7 @@ class _PlanCard extends StatelessWidget {
               PrimaryButton(
                 label: next.isDoneToday ? 'Do it again' : 'Begin test',
                 onPressed: () => onStart(next),
+                tactile: true,
               )
             else ...<Widget>[
               const _NotAvailableChip(),
