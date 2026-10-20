@@ -18,6 +18,7 @@ class AppScope extends AppScopeBase {
     required this.roster,
     required this.assignments,
     required this.exceptions,
+    required this.theme,
     required super.child,
   });
 
@@ -27,6 +28,9 @@ class AppScope extends AppScopeBase {
 
   /// The specialist review queue and the reviews recorded against it.
   final ExceptionController exceptions;
+
+  /// Which mood the application is in, and the doctor's choice of it.
+  final ThemeController theme;
 
   static AppScope of(BuildContext context) {
     final AppScope? scope =

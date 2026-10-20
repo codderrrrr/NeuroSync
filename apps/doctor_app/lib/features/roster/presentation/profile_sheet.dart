@@ -24,7 +24,9 @@ class _ProfileSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AuthController auth = AppScope.of(context).auth;
+    final AppScope scope = AppScope.of(context);
+    final AuthController auth = scope.auth;
+    final ThemeController theme = scope.theme;
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final String? code = auth.doctor?.code;
 
@@ -95,6 +97,12 @@ class _ProfileSheet extends StatelessWidget {
             const MutedText(
               'Patients enter this code in the patient app to request a link '
               'with you. It works like a classroom join code.',
+            ),
+            const SizedBox(height: 24),
+            const SectionHeader('Appearance'),
+            ThemeChoice(
+              mode: theme.value,
+              onChanged: theme.set,
             ),
             const SizedBox(height: 24),
             SecondaryButton(

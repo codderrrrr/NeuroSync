@@ -54,6 +54,8 @@ void main() {
     repository: MedicationRepository(apiClient: apiClient),
   );
 
+  final ThemeController themeController = ThemeController();
+
   runApp(
     NeuroSyncApp(
       authController: authController,
@@ -61,6 +63,7 @@ void main() {
       checkInController: checkInController,
       monitoringController: monitoringController,
       medicationController: medicationController,
+      themeController: themeController,
     ),
   );
 }

@@ -20,6 +20,7 @@ class NeuroSyncApp extends StatefulWidget {
     required this.checkInController,
     required this.monitoringController,
     required this.medicationController,
+    required this.themeController,
   });
 
   final AuthController authController;
@@ -27,6 +28,9 @@ class NeuroSyncApp extends StatefulWidget {
   final CheckInController checkInController;
   final MonitoringController monitoringController;
   final MedicationController medicationController;
+
+  /// Which mood the application is in, and the patient's choice of it.
+  final ThemeController themeController;
 
   @override
   State<NeuroSyncApp> createState() => _NeuroSyncAppState();
@@ -38,6 +42,9 @@ class _NeuroSyncAppState extends State<NeuroSyncApp> {
     super.initState();
     // Check for an existing session exactly once, on launch.
     widget.authController.restoreSession();
+    // The mood is read before the first frame, so the app opens in the one
+    // the patient last chose rather than flashing the wrong one.
+    widget.themeController.load();
   }
 
   @override
@@ -48,23 +55,36 @@ class _NeuroSyncAppState extends State<NeuroSyncApp> {
       checkIns: widget.checkInController,
       monitoring: widget.monitoringController,
       medications: widget.medicationController,
-      child: MaterialApp(
-        title: 'NeuroSync',
-        debugShowCheckedModeBanner: false,
-        // One theme for the whole app: dark, warm, and the same palette the
-        // first-time experience uses, so signing in changes screens and not
-        // worlds.
-        theme: AppTheme.dark(),
-        builder: (BuildContext context, Widget? child) =>
-            AnnotatedRegion<SystemUiOverlayStyle>(
-          value: const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark,
-          ),
-          child: child!,
-        ),
-        home: const _RootView(),
+      theme: widget.themeController,
+      child: ListenableBuilder(
+        listenable: widget.themeController,
+        builder: (BuildContext context, Widget? child) {
+          return MaterialApp(
+            title: 'NeuroSync',
+            debugShowCheckedModeBanner: false,
+            // Two moods, one palette: the warm ivory for daylight, the slate
+            // for the evening and the bedside. The patient chooses.
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: widget.themeController.value,
+            builder: (BuildContext context, Widget? child) =>
+                AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness:
+                    widget.themeController.value == ThemeMode.dark
+                        ? Brightness.light
+                        : Brightness.dark,
+                statusBarBrightness:
+                    widget.themeController.value == ThemeMode.dark
+                        ? Brightness.dark
+                        : Brightness.light,
+              ),
+              child: child!,
+            ),
+            home: const _RootView(),
+          );
+        },
       ),
     );
   }

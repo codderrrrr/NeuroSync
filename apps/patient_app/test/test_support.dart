@@ -109,6 +109,7 @@ Widget patientScope({
   required PatientControllers controllers,
   required Widget child,
   AuthController? authController,
+  ThemeController? themeController,
 }) {
   return AppScope(
     auth: authController ?? controllers.auth,
@@ -116,6 +117,7 @@ Widget patientScope({
     checkIns: controllers.checkIns,
     monitoring: controllers.monitoring,
     medications: controllers.medications,
+    theme: themeController ?? ThemeController(),
     child: child,
   );
 }

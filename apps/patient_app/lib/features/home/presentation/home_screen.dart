@@ -129,12 +129,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final AuthController auth = scope.auth;
     final MonitoringController monitoring = scope.monitoring;
     final MedicationController medications = scope.medications;
+    final ThemeController theme = scope.theme;
 
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
-          listenable:
-              Listenable.merge(<Listenable>[auth, monitoring, medications]),
+          listenable: Listenable.merge(
+            <Listenable>[auth, monitoring, medications, theme],
+          ),
           builder: (BuildContext context, Widget? child) {
             // Pulling down is the patient asking to check again now, rather
             // than waiting for the shell's next refresh.
@@ -261,6 +263,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   const MutedText(
                     'Your check-ins are shared only with doctors you link. '
                     'Find them under the Doctors tab.',
+                  ),
+                  const SizedBox(height: 24),
+                  // The mood is the patient's to choose: some use the app in
+                  // the evening and in bed, where a bright page is hard.
+                  const Text(
+                    'APPEARANCE',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.7,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ThemeChoice(
+                    mode: theme.value,
+                    onChanged: theme.set,
                   ),
                   const SizedBox(height: 24),
                   SecondaryButton(

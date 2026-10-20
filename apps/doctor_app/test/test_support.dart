@@ -404,8 +404,10 @@ Future<AuthController> pumpDoctorScreen(
           repository: AssignmentRepository(apiClient: apiClient)),
       exceptions: ExceptionController(
           repository: ExceptionRepository(apiClient: apiClient)),
+      theme: ThemeController(),
       child: MaterialApp(
-        theme: AppTheme.dark(),
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
         home: home,
       ),
     ),

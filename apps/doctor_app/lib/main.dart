@@ -50,12 +50,15 @@ void main() {
 
   authController.restoreSession();
 
+  final ThemeController themeController = ThemeController();
+
   runApp(
     NeuroSyncDoctorApp(
       authController: authController,
       rosterController: rosterController,
       assignmentController: assignmentController,
       exceptionController: exceptionController,
+      themeController: themeController,
     ),
   );
 }

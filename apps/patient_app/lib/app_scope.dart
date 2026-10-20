@@ -20,6 +20,7 @@ class AppScope extends AppScopeBase {
     required this.checkIns,
     required this.monitoring,
     required this.medications,
+    required this.theme,
     required super.child,
   });
 
@@ -28,6 +29,9 @@ class AppScope extends AppScopeBase {
   final CheckInController checkIns;
   final MonitoringController monitoring;
   final MedicationController medications;
+
+  /// Which mood the application is in, and the patient's choice of it.
+  final ThemeController theme;
 
   static AppScope of(BuildContext context) {
     final AppScope? scope =

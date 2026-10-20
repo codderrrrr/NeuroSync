@@ -13,13 +13,14 @@ import 'features/roster/presentation/profile_sheet.dart';
 import 'features/roster/state/roster_controller.dart';
 
 /// Root widget: decides between splash, login and home from auth state.
-class NeuroSyncDoctorApp extends StatelessWidget {
+class NeuroSyncDoctorApp extends StatefulWidget {
   const NeuroSyncDoctorApp({
     super.key,
     required this.authController,
     required this.rosterController,
     required this.assignmentController,
     required this.exceptionController,
+    required this.themeController,
   });
 
   final AuthController authController;
@@ -27,30 +28,60 @@ class NeuroSyncDoctorApp extends StatelessWidget {
   final AssignmentController assignmentController;
   final ExceptionController exceptionController;
 
+  /// Which mood the application is in, and the doctor's choice of it.
+  final ThemeController themeController;
+
+  @override
+  State<NeuroSyncDoctorApp> createState() => _NeuroSyncDoctorAppState();
+}
+
+class _NeuroSyncDoctorAppState extends State<NeuroSyncDoctorApp> {
+  @override
+  void initState() {
+    super.initState();
+    // The mood is read before the first frame, so the portal opens in the one
+    // the doctor last chose rather than flashing the wrong one.
+    widget.themeController.load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScope(
-      auth: authController,
-      roster: rosterController,
-      assignments: assignmentController,
-      exceptions: exceptionController,
-      child: MaterialApp(
-        title: 'NeuroSync Doctor',
-        debugShowCheckedModeBanner: false,
-        // The same palette and typography system as the patient app: one
-        // dark theme, Apple-style, so the two sides of the product feel
-        // like one product.
-        theme: AppTheme.dark(),
-        builder: (BuildContext context, Widget? child) =>
-            AnnotatedRegion<SystemUiOverlayStyle>(
-          value: const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark,
-          ),
-          child: child!,
-        ),
-        home: const _RootView(),
+      auth: widget.authController,
+      roster: widget.rosterController,
+      assignments: widget.assignmentController,
+      exceptions: widget.exceptionController,
+      theme: widget.themeController,
+      child: ListenableBuilder(
+        listenable: widget.themeController,
+        builder: (BuildContext context, Widget? child) {
+          return MaterialApp(
+            title: 'NeuroSync Doctor',
+            debugShowCheckedModeBanner: false,
+            // The same palette and typography system as the patient app: warm
+            // ivory for a bright clinic, slate for a dim one, so the two sides
+            // of the product feel like one product.
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: widget.themeController.value,
+            builder: (BuildContext context, Widget? child) =>
+                AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness:
+                    widget.themeController.value == ThemeMode.dark
+                        ? Brightness.light
+                        : Brightness.dark,
+                statusBarBrightness:
+                    widget.themeController.value == ThemeMode.dark
+                        ? Brightness.dark
+                        : Brightness.light,
+              ),
+              child: child!,
+            ),
+            home: const _RootView(),
+          );
+        },
       ),
     );
   }

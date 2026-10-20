@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:neurosync_core/neurosync_core.dart';
 import 'package:neurosync_patient/app.dart';
 
 import 'test_support.dart';
@@ -25,6 +26,7 @@ Widget signedInApp() {
     checkInController: controllers.checkIns,
     monitoringController: controllers.monitoring,
     medicationController: controllers.medications,
+    themeController: ThemeController(),
   );
 }
 
