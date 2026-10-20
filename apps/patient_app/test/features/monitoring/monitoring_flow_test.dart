@@ -3,22 +3,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:neurosync_patient/app_scope.dart';
-import 'package:neurosync_patient/features/auth/data/auth_repository.dart';
-import 'package:neurosync_patient/features/auth/state/auth_controller.dart';
-import 'package:neurosync_patient/features/check_ins/data/check_in_repository.dart';
-import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
-import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
-import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
 import 'package:neurosync_patient/features/home/presentation/home_screen.dart';
-import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
-import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
-import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
 import 'package:neurosync_patient/features/monitoring/models/session_result.dart';
 import 'package:neurosync_patient/features/monitoring/presentation/session_result_screen.dart';
-import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
 import 'package:neurosync_core/neurosync_core.dart';
+import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
+
+import '../../test_support.dart';
 
 Map<String, dynamic> assessmentJson({
   String slug = 'finger_tapping',
@@ -91,7 +82,9 @@ Map<String, dynamic> sessionJson({
 }
 
 /// Pumps the Home screen wired to a mock API with a scripted handler.
-Future<AppScope> pumpHome(
+///
+/// Returns the monitoring controller, so a test can drive the plan.
+Future<MonitoringController> pumpHome(
   WidgetTester tester,
   Future<http.Response> Function(http.Request) handler,
 ) async {
@@ -99,38 +92,18 @@ Future<AppScope> pumpHome(
   tester.view.physicalSize = const Size(400, 1600);
   addTearDown(tester.view.reset);
 
-  final SessionTokenCache tokenCache = SessionTokenCache();
-  final ApiClient apiClient = ApiClient(
-    baseUrl: 'http://api.test',
-    httpClient: MockClient(handler),
-    sessionToken: tokenCache,
-  );
-  final AppScope scope = AppScope(
-    auth: AuthController(
-      repository: AuthRepository(apiClient: apiClient),
-      tokenStore: InMemorySessionTokenStore(),
-      tokenCache: tokenCache,
-    ),
-    doctorLinks: DoctorLinkController(
-      repository: DoctorLinkRepository(apiClient: apiClient),
-    ),
-    checkIns: CheckInController(
-      repository: CheckInRepository(apiClient: apiClient),
-    ),
-    monitoring: MonitoringController(
-      repository: MonitoringRepository(apiClient: apiClient),
-    ),
-    medications: MedicationController(
-      repository: MedicationRepository(apiClient: apiClient),
-    ),
-    child: MaterialApp(
-      theme: AppTheme.dark(),
-      home: const HomeScreen(),
+  final PatientControllers controllers = controllersWith(handler);
+  await tester.pumpWidget(
+    patientScope(
+      controllers: controllers,
+      child: MaterialApp(
+        theme: AppTheme.dark(),
+        home: const HomeScreen(),
+      ),
     ),
   );
-  await tester.pumpWidget(scope);
   await tester.pumpAndSettle();
-  return scope;
+  return controllers.monitoring;
 }
 
 http.Response json(Object body, [int status = 200]) =>

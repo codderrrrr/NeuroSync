@@ -3,50 +3,18 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:neurosync_patient/app_scope.dart';
-import 'package:neurosync_patient/features/auth/data/auth_repository.dart';
-import 'package:neurosync_patient/features/auth/state/auth_controller.dart';
-import 'package:neurosync_patient/features/check_ins/data/check_in_repository.dart';
-import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
-import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
-import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
-import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
-import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
-import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
-import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
 import 'package:neurosync_patient/features/shell/presentation/main_shell.dart';
 import 'package:neurosync_core/neurosync_core.dart';
+import '../../test_support.dart';
 
 Widget wrapShell() {
-  final SessionTokenCache tokenCache = SessionTokenCache();
-  final ApiClient apiClient = ApiClient(
-    baseUrl: 'http://api.test',
+  final PatientControllers controllers = controllersWith(
     // Every list endpoint answers with an empty list, so the tabs settle.
-    httpClient: MockClient(
-      (http.Request request) async => http.Response('[]', 200),
-    ),
-    sessionToken: tokenCache,
+    (http.Request request) async => http.Response('[]', 200),
   );
 
-  return AppScope(
-    auth: AuthController(
-      repository: AuthRepository(apiClient: apiClient),
-      tokenStore: InMemorySessionTokenStore(),
-      tokenCache: tokenCache,
-    ),
-    doctorLinks: DoctorLinkController(
-      repository: DoctorLinkRepository(apiClient: apiClient),
-    ),
-    checkIns: CheckInController(
-      repository: CheckInRepository(apiClient: apiClient),
-    ),
-    monitoring: MonitoringController(
-      repository: MonitoringRepository(apiClient: apiClient),
-    ),
-    medications: MedicationController(
-      repository: MedicationRepository(apiClient: apiClient),
-    ),
+  return patientScope(
+    controllers: controllers,
     child: MaterialApp(
       theme: AppTheme.dark(),
       home: const MainShell(),
@@ -116,31 +84,11 @@ Map<String, dynamic> pendingLinkJson() => <String, dynamic>{
 
 /// A shell wired to [api], for tests that change the answers mid-run.
 Widget wrapShellWith(ScriptedApi api) {
-  final SessionTokenCache tokenCache = SessionTokenCache();
-  final ApiClient apiClient = ApiClient(
-    baseUrl: 'http://api.test',
-    httpClient: MockClient(api.call),
-    sessionToken: tokenCache,
-  );
+  final PatientControllers controllers =
+      controllersWith((http.Request request) async => api.call(request));
 
-  return AppScope(
-    auth: AuthController(
-      repository: AuthRepository(apiClient: apiClient),
-      tokenStore: InMemorySessionTokenStore(),
-      tokenCache: tokenCache,
-    ),
-    doctorLinks: DoctorLinkController(
-      repository: DoctorLinkRepository(apiClient: apiClient),
-    ),
-    checkIns: CheckInController(
-      repository: CheckInRepository(apiClient: apiClient),
-    ),
-    monitoring: MonitoringController(
-      repository: MonitoringRepository(apiClient: apiClient),
-    ),
-    medications: MedicationController(
-      repository: MedicationRepository(apiClient: apiClient),
-    ),
+  return patientScope(
+    controllers: controllers,
     child: MaterialApp(
       theme: AppTheme.dark(),
       home: const MainShell(),

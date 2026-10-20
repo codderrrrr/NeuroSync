@@ -1,54 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:neurosync_patient/app.dart';
-import 'package:neurosync_patient/features/auth/data/auth_repository.dart';
-import 'package:neurosync_patient/features/auth/state/auth_controller.dart';
-import 'package:neurosync_patient/features/check_ins/data/check_in_repository.dart';
-import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
-import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
-import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
-import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
-import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
-import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
-import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
-import 'package:neurosync_core/neurosync_core.dart';
 
-const String _patientJson =
-    '{"id": 1, "email": "ada@example.com", "name": "Ada Lovelace", '
-    '"created_at": "2026-01-01T10:00:00Z"}';
+import 'test_support.dart';
 
 /// Pumps the real [NeuroSyncApp] with a stored session, so the root decides
 /// what a signed-in patient actually sees.
 Widget signedInApp() {
-  final SessionTokenCache tokenCache = SessionTokenCache();
-  final ApiClient apiClient = ApiClient(
-    baseUrl: 'http://api.test',
-    httpClient: MockClient((http.Request request) async {
+  final PatientControllers controllers = controllersWith(
+    (http.Request request) async {
       if (request.url.path == '/auth/me') {
-        return http.Response(_patientJson, 200);
+        return json(patientJson());
       }
       // Every list endpoint answers empty; the root only needs them to settle.
       return http.Response('[]', 200);
-    }),
-    sessionToken: tokenCache,
+    },
+    storedToken: 'stored-token',
   );
 
   return NeuroSyncApp(
-    authController: AuthController(
-      repository: AuthRepository(apiClient: apiClient),
-      tokenStore: InMemorySessionTokenStore('stored-token'),
-      tokenCache: tokenCache,
-    ),
-    doctorLinkController: DoctorLinkController(
-        repository: DoctorLinkRepository(apiClient: apiClient)),
-    checkInController:
-        CheckInController(repository: CheckInRepository(apiClient: apiClient)),
-    monitoringController: MonitoringController(
-        repository: MonitoringRepository(apiClient: apiClient)),
-    medicationController: MedicationController(
-        repository: MedicationRepository(apiClient: apiClient)),
+    authController: controllers.auth,
+    doctorLinkController: controllers.doctorLinks,
+    checkInController: controllers.checkIns,
+    monitoringController: controllers.monitoring,
+    medicationController: controllers.medications,
   );
 }
 

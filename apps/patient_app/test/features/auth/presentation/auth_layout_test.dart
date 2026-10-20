@@ -1,21 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:neurosync_patient/app_scope.dart';
-import 'package:neurosync_patient/features/auth/data/auth_repository.dart';
 import 'package:neurosync_patient/features/auth/presentation/login_screen.dart';
 import 'package:neurosync_patient/features/auth/presentation/signup_screen.dart';
-import 'package:neurosync_patient/features/auth/state/auth_controller.dart';
-import 'package:neurosync_patient/features/check_ins/data/check_in_repository.dart';
-import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
-import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
-import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
-import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
-import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
-import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
-import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
 import 'package:neurosync_core/neurosync_core.dart';
+
+import '../../../test_support.dart';
 
 /// The authentication screens as the first-time experience presents them: the
 /// dark theme, on a phone-sized surface.
@@ -29,33 +19,13 @@ Future<void> pumpAuthScreen(
   tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
 
-  final SessionTokenCache tokenCache = SessionTokenCache();
-  final ApiClient apiClient = ApiClient(
-    baseUrl: 'http://api.test',
-    httpClient:
-        MockClient((http.Request request) async => http.Response('{}', 200)),
-    sessionToken: tokenCache,
+  final PatientControllers controllers = controllersWith(
+    (http.Request request) async => http.Response('{}', 200),
   );
 
   await tester.pumpWidget(
-    AppScope(
-      auth: AuthController(
-        repository: AuthRepository(apiClient: apiClient),
-        tokenStore: InMemorySessionTokenStore(),
-        tokenCache: tokenCache,
-      ),
-      doctorLinks: DoctorLinkController(
-        repository: DoctorLinkRepository(apiClient: apiClient),
-      ),
-      checkIns: CheckInController(
-        repository: CheckInRepository(apiClient: apiClient),
-      ),
-      monitoring: MonitoringController(
-        repository: MonitoringRepository(apiClient: apiClient),
-      ),
-      medications: MedicationController(
-        repository: MedicationRepository(apiClient: apiClient),
-      ),
+    patientScope(
+      controllers: controllers,
       child: MaterialApp(
         theme: AppTheme.dark(),
         builder: (BuildContext context, Widget? child) => MediaQuery(

@@ -84,7 +84,8 @@ class AssessmentSetting {
         defaultValue: json['default'] as Object,
         choices: (json['choices'] as List<dynamic>? ?? const <dynamic>[])
             .cast<String>(),
-        choiceLabels: (json['choice_labels'] as Map<String, dynamic>? ?? const <String, dynamic>{})
+        choiceLabels: (json['choice_labels'] as Map<String, dynamic>? ??
+                const <String, dynamic>{})
             .map((k, v) => MapEntry(k, v as String)),
         valueFormat: json['value_format'] as String?,
       );
@@ -100,7 +101,9 @@ class AssessmentSetting {
   /// A plain-language rendering of one value, for the "your test is set up as"
   /// list. Uses API-provided choice_labels and value_format when available.
   String describe(Object value) {
-    if (kind == 'choice' && value is String && choiceLabels.containsKey(value)) {
+    if (kind == 'choice' &&
+        value is String &&
+        choiceLabels.containsKey(value)) {
       return choiceLabels[value]!;
     }
     if (valueFormat != null) {

@@ -3,24 +3,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:neurosync_patient/app_scope.dart';
-import 'package:neurosync_patient/features/auth/data/auth_repository.dart';
 import 'package:neurosync_patient/features/auth/presentation/splash_screen.dart';
-import 'package:neurosync_patient/features/auth/state/auth_controller.dart';
-import 'package:neurosync_patient/features/check_ins/data/check_in_repository.dart';
-import 'package:neurosync_patient/features/check_ins/state/check_in_controller.dart';
-import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
-import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
 import 'package:neurosync_patient/features/intro/onboarding_screen.dart';
-import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
-import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
-import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
 import 'package:neurosync_patient/features/monitoring/models/session_result.dart';
 import 'package:neurosync_patient/features/monitoring/presentation/session_result_screen.dart';
-import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
 import 'package:neurosync_patient/features/shell/presentation/main_shell.dart';
 import 'package:neurosync_core/neurosync_core.dart';
+
+import 'test_support.dart';
 
 /// A small phone, a normal phone and a tall phone.
 const List<Size> _viewports = <Size>[
@@ -61,10 +51,8 @@ http.Response _json(Object body, [int status = 200]) =>
     http.Response(jsonEncode(body), status);
 
 Widget _scope(Widget home, {Size? viewport, WidgetTester? tester}) {
-  final SessionTokenCache tokenCache = SessionTokenCache();
-  final ApiClient apiClient = ApiClient(
-    baseUrl: 'http://api.test',
-    httpClient: MockClient((http.Request request) async {
+  final PatientControllers controllers = controllersWith(
+    (http.Request request) async {
       if (request.url.path == '/auth/me') {
         return http.Response(_patientJson, 200);
       }
@@ -95,8 +83,8 @@ Widget _scope(Widget home, {Size? viewport, WidgetTester? tester}) {
         ]);
       }
       return _json(<dynamic>[]);
-    }),
-    sessionToken: tokenCache,
+    },
+    storedToken: 'token',
   );
 
   if (tester != null && viewport != null) {
@@ -105,24 +93,8 @@ Widget _scope(Widget home, {Size? viewport, WidgetTester? tester}) {
     addTearDown(tester.view.reset);
   }
 
-  return AppScope(
-    auth: AuthController(
-      repository: AuthRepository(apiClient: apiClient),
-      tokenStore: InMemorySessionTokenStore('token'),
-      tokenCache: tokenCache,
-    ),
-    doctorLinks: DoctorLinkController(
-      repository: DoctorLinkRepository(apiClient: apiClient),
-    ),
-    checkIns: CheckInController(
-      repository: CheckInRepository(apiClient: apiClient),
-    ),
-    monitoring: MonitoringController(
-      repository: MonitoringRepository(apiClient: apiClient),
-    ),
-    medications: MedicationController(
-      repository: MedicationRepository(apiClient: apiClient),
-    ),
+  return patientScope(
+    controllers: controllers,
     child: MaterialApp(theme: AppTheme.dark(), home: home),
   );
 }
