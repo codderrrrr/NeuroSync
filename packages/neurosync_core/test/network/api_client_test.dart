@@ -105,4 +105,55 @@ void main() {
     await expectLater(
         client.getObject('/health'), throwsA(isA<ApiException>()));
   });
+
+  test('names the address it could not reach', () async {
+    final ApiClient client = buildClient(
+      MockClient((http.Request request) async {
+        throw http.ClientException('Connection refused');
+      }),
+    );
+
+    // The usual cause is a stale address: the machine's changed and the app
+    // is still asking for the old one. The message has to name it, or the
+    // failure looks like the server being slow.
+    await expectLater(
+      client.getObject('/health'),
+      throwsA(
+        isA<ApiException>().having(
+          (ApiException error) => error.message,
+          'message',
+          contains('http://api.test'),
+        ),
+      ),
+    );
+  });
+
+  test('a slow server is reported against the address too', () async {
+    final ApiClient client = ApiClient(
+      baseUrl: 'http://192.168.3.111:8000',
+      httpClient: MockClient((http.Request request) async {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        return http.Response('{}', 200);
+      }),
+      sessionToken: SessionTokenCache(),
+      timeout: const Duration(milliseconds: 50),
+    );
+
+    await expectLater(
+      client.getObject('/health'),
+      throwsA(
+        isA<ApiException>()
+            .having(
+              (ApiException error) => error.message,
+              'message',
+              contains('192.168.3.111:8000'),
+            )
+            .having(
+              (ApiException error) => error.message,
+              'message',
+              contains('took too long'),
+            ),
+      ),
+    );
+  });
 }

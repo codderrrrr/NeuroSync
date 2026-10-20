@@ -14,21 +14,28 @@ flutter pub get
 flutter run -d chrome --dart-define=NEUROSYNC_API_BASE_URL=http://127.0.0.1:8000
 ```
 
-As a mobile app:
+As a mobile app, or as a portal opened on another device:
 
 ```bash
-flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://<your-lan-ip>:8000
+uv run python scripts/dev_api_address.py
+flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://192.168.3.111:8000
 ```
 
 Start the backend first:
 
 ```bash
-uv run uvicorn neurosync.main:app --reload --port 8000
+uv run uvicorn neurosync.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-`NEUROSYNC_API_BASE_URL` defaults to a LAN address baked in at build time. Use
-your own machine's LAN IP for a physical device, or `http://10.0.2.2:8000` from
-an Android emulator to reach the host.
+**Use the helper script.** A laptop's address is assigned by DHCP and changes
+whenever the machine rejoins a network. An app still carrying the old one will
+hang until it times out, because the request is going somewhere that does not
+answer - which looks like the server being slow rather than the address
+being wrong. `scripts/dev_api_address.py` prints the current address and
+whether the backend is answering on it.
+
+The backend serves the portal on the local network in development only, so a
+browser on a phone or tablet can load it from the machine's address.
 
 To produce a deployable portal:
 

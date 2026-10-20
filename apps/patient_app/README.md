@@ -46,15 +46,23 @@ contents; it only adds the missing platform scaffolding.
 The API base URL is compiled in, so point the build at your API:
 
 ```bash
+# Physical device (use your machine's LAN address)
+uv run python scripts/dev_api_address.py
+flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://192.168.3.111:8000
+
 # Android emulator (10.0.2.2 is the host machine)
 flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://10.0.2.2:8000
 
 # iOS simulator / desktop
 flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://localhost:8000
-
-# Physical device (use your machine's LAN address)
-flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://192.168.1.10:8000
 ```
+
+**Use the helper script.** A laptop's address is assigned by DHCP and changes
+whenever the machine rejoins a network. An app still carrying the old one will
+hang until it times out, because the request is going somewhere that does not
+answer - which looks like the server being slow rather than the address
+being wrong. `scripts/dev_api_address.py` prints the current address and
+whether the backend is answering on it.
 
 Seed a development doctor and code so the linking flow can be exercised:
 

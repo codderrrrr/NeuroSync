@@ -343,19 +343,28 @@ a mobile app on Android and iOS from the same codebase.
 
 ```bash
 # Run the backend
-uv run uvicorn neurosync.main:app --reload --port 8000
+uv run uvicorn neurosync.main:app --reload --host 0.0.0.0 --port 8000
 
 # As a web portal
 cd apps/doctor_app
 flutter run -d chrome --dart-define=NEUROSYNC_API_BASE_URL=http://127.0.0.1:8000
 
 # As a mobile app (a phone cannot reach `localhost`)
-flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://<your-lan-ip>:8000
+cd ../..
+uv run python scripts/dev_api_address.py
+cd apps/doctor_app
+flutter run --dart-define=NEUROSYNC_API_BASE_URL=http://192.168.3.111:8000
 ```
 
+The API base URL is compiled into each app, and a laptop's address is
+assigned by DHCP, so it changes whenever the machine rejoins a network.
+`scripts/dev_api_address.py` prints the current one and whether the backend
+is answering on it; pass it in with `--dart-define` rather than relying on
+the built-in default, which will be stale the next time the address moves.
+
 The portal adapts by width rather than shrinking: a fixed sidebar at 900px and
-above, a compact icon bar below it, and a roster that is a table at 720px and
-above and a list below that.
+above, a compact icon bar below it, and a roster that is a grid of panels,
+one per patient.
 
 Checks: `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`,
 `flutter test` and `flutter build web --release` inside `apps/doctor_app`.

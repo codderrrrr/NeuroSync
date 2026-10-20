@@ -104,9 +104,18 @@ class ApiClient {
     try {
       return await request().timeout(_timeout);
     } on TimeoutException {
-      throw const ApiException('The server took too long to respond.');
+      // The address is named because the usual cause is a stale one: the
+      // machine's address changed and the app is still asking for the old
+      // one, so the request never leaves the device.
+      throw ApiException(
+        'The server at $baseUrl took too long to respond. '
+        'Check that the address is still this machine, and that the backend '
+        'is running.',
+      );
     } on http.ClientException catch (error) {
-      throw ApiException('Could not reach the server (${error.message}).');
+      throw ApiException(
+        'Could not reach the server at $baseUrl (${error.message}).',
+      );
     }
   }
 
