@@ -137,13 +137,13 @@ class _MedicationRow extends StatelessWidget {
                 ],
                 if (!medication.isActive) ...<Widget>[
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'NO LONGER CURRENT',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.6,
-                      color: AppTheme.darkSecondaryLabel,
+                      color: AppColors.of(context).secondaryLabel,
                     ),
                   ),
                 ],

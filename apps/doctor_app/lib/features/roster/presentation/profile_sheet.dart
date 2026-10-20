@@ -11,7 +11,7 @@ Future<void> showProfileSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppTheme.darkSurface,
+    backgroundColor: AppColors.of(context).surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -51,13 +51,14 @@ class _ProfileSheet extends StatelessWidget {
               children: <Widget>[
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: AppTheme.accentMint.withValues(alpha: 0.16),
+                  backgroundColor:
+                      AppColors.of(context).primary.withValues(alpha: 0.16),
                   child: Text(
                     _initial(auth),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.accentMint,
+                      color: AppColors.of(context).primary,
                     ),
                   ),
                 ),
@@ -98,7 +99,7 @@ class _ProfileSheet extends StatelessWidget {
             const SizedBox(height: 24),
             SecondaryButton(
               label: 'Sign out',
-              color: AppTheme.danger,
+              color: AppColors.of(context).danger,
               onPressed: () => _signOut(context),
             ),
           ],
@@ -137,10 +138,10 @@ class _CodeCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     code!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.accentMint,
+                      color: AppColors.of(context).primary,
                       letterSpacing: 3,
                     ),
                   ),
@@ -158,8 +159,8 @@ class _CodeCard extends StatelessWidget {
                       );
                     }
                   },
-                  icon: const Icon(Icons.copy_rounded,
-                      color: AppTheme.accentMint),
+                  icon: Icon(Icons.copy_rounded,
+                      color: AppColors.of(context).primary),
                 ),
               ],
             ),

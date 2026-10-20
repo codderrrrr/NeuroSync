@@ -135,15 +135,15 @@ class _NotAvailableChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: AppTheme.pendingTint,
+          color: AppColors.of(context).pendingTint,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: const Text(
+        child: Text(
           'NOT AVAILABLE YET',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: AppTheme.pending,
+            color: AppColors.of(context).pending,
             letterSpacing: 0.6,
           ),
         ),
@@ -162,8 +162,8 @@ class _AllDoneToday extends StatelessWidget {
       children: <Widget>[
         Row(
           children: <Widget>[
-            const Icon(Icons.check_circle_outline,
-                size: 20, color: AppTheme.active),
+            Icon(Icons.check_circle_outline,
+                size: 20, color: AppColors.of(context).active),
             const SizedBox(width: 8),
             Expanded(
               child: Text(

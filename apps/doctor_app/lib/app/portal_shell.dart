@@ -61,7 +61,7 @@ class _PortalShellState extends State<PortalShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppColors.of(context).background,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
@@ -136,9 +136,10 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 248,
-      decoration: const BoxDecoration(
-        color: AppTheme.darkSurface,
-        border: Border(right: BorderSide(color: AppTheme.darkSeparator)),
+      decoration: BoxDecoration(
+        color: AppColors.of(context).surface,
+        border:
+            Border(right: BorderSide(color: AppColors.of(context).separator)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -189,9 +190,10 @@ class _CompactBar extends StatelessWidget {
         // the wordmark is the first thing that can give up its text.
         final bool showWordmarkText = constraints.maxWidth >= 420;
         return Container(
-          decoration: const BoxDecoration(
-            color: AppTheme.darkSurface,
-            border: Border(bottom: BorderSide(color: AppTheme.darkSeparator)),
+          decoration: BoxDecoration(
+            color: AppColors.of(context).surface,
+            border: Border(
+                bottom: BorderSide(color: AppColors.of(context).separator)),
           ),
           child: Row(
             children: <Widget>[
@@ -218,7 +220,7 @@ class _CompactBar extends StatelessWidget {
                   tooltip: 'Profile',
                   onPressed: onOpenProfile,
                   icon: const Icon(Icons.account_circle_outlined),
-                  color: AppTheme.darkSecondaryLabel,
+                  color: AppColors.of(context).secondaryLabel,
                   iconSize: 21,
                   padding: const EdgeInsets.all(10),
                   constraints:
@@ -337,7 +339,7 @@ class _SidebarItem extends StatelessWidget {
             size: 20,
             color: selected
                 ? Theme.of(context).colorScheme.primary
-                : AppTheme.darkSecondaryLabel,
+                : AppColors.of(context).secondaryLabel,
           ),
           const SizedBox(width: 12),
           Flexible(
@@ -350,7 +352,7 @@ class _SidebarItem extends StatelessWidget {
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                 color: selected
                     ? Theme.of(context).colorScheme.onSurface
-                    : AppTheme.darkSecondaryLabel,
+                    : AppColors.of(context).secondaryLabel,
               ),
             ),
           ),
@@ -383,7 +385,7 @@ class _CompactItem extends StatelessWidget {
         size: 20,
         color: selected
             ? Theme.of(context).colorScheme.primary
-            : AppTheme.darkSecondaryLabel,
+            : AppColors.of(context).secondaryLabel,
       ),
     );
   }
@@ -404,13 +406,14 @@ class _AccountButton extends StatelessWidget {
         children: <Widget>[
           CircleAvatar(
             radius: 16,
-            backgroundColor: AppTheme.accentMint.withValues(alpha: 0.16),
+            backgroundColor:
+                AppColors.of(context).primary.withValues(alpha: 0.16),
             child: Text(
               _initial,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: AppTheme.accentMint,
+                color: AppColors.of(context).primary,
               ),
             ),
           ),
@@ -431,11 +434,11 @@ class _AccountButton extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 1),
-                const Text(
+                Text(
                   'Profile',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.darkSecondaryLabel,
+                    color: AppColors.of(context).secondaryLabel,
                   ),
                 ),
               ],

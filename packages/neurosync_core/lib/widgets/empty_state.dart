@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
 
 /// An empty state that says what is empty, why, and what to do about it.
 class EmptyState extends StatelessWidget {
@@ -33,7 +33,8 @@ class EmptyState extends StatelessWidget {
                 color: scheme.surface,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, size: 22, color: AppTheme.darkSecondaryLabel),
+              child: Icon(icon,
+                  size: 22, color: AppColors.of(context).secondaryLabel),
             ),
             const SizedBox(height: 16),
             Text(
@@ -49,10 +50,10 @@ class EmptyState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 height: 1.45,
-                color: AppTheme.darkSecondaryLabel,
+                color: AppColors.of(context).secondaryLabel,
               ),
             ),
             if (action != null) ...<Widget>[

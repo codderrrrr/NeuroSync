@@ -28,111 +28,217 @@ Color _tintedSurface(Color tint, Color surface) =>
     Color.alphaBlend(tint, surface);
 
 void main() {
-  group('readability', () {
+  group('the light palette', () {
     test('body text clears AAA on the page and on a card', () {
-      expect(_contrast(AppTheme.darkLabel, AppTheme.darkBackground),
+      expect(_contrast(AppColors.light.label, AppColors.light.background),
           greaterThanOrEqualTo(7));
-      expect(_contrast(AppTheme.darkLabel, AppTheme.darkSurface),
+      expect(_contrast(AppColors.light.label, AppColors.light.surface),
           greaterThanOrEqualTo(7));
     });
 
     test('supporting text clears AA on the page and on a card', () {
-      // 60% white is translucent, so what the eye sees is the composite.
       expect(
-          _contrast(
-              _tintedSurface(
-                  AppTheme.darkSecondaryLabel, AppTheme.darkBackground),
-              AppTheme.darkBackground),
+          _contrast(AppColors.light.secondaryLabel, AppColors.light.background),
           greaterThanOrEqualTo(4.5));
-      expect(
-          _contrast(
-              _tintedSurface(AppTheme.darkSecondaryLabel, AppTheme.darkSurface),
-              AppTheme.darkSurface),
+      expect(_contrast(AppColors.light.secondaryLabel, AppColors.light.surface),
           greaterThanOrEqualTo(4.5));
     });
 
     test('the accent reads as text and can carry a label', () {
-      expect(_contrast(AppTheme.accentMint, AppTheme.darkBackground),
+      expect(_contrast(AppColors.light.primary, AppColors.light.background),
           greaterThanOrEqualTo(4.5));
-      expect(_contrast(AppTheme.accentMint, AppTheme.darkSurface),
+      expect(_contrast(AppColors.light.primary, AppColors.light.surface),
           greaterThanOrEqualTo(4.5));
-      // Label on a filled button: the dark teal used as onPrimary, not the
-      // page grey, which would fall short of AA on this accent.
-      expect(_contrast(const Color(0xFF003548), AppTheme.accentMint),
+      expect(_contrast(AppColors.light.onPrimary, AppColors.light.primary),
+          greaterThanOrEqualTo(4.5));
+    });
+
+    test('the action colour reads as text and can carry a label', () {
+      expect(_contrast(AppColors.light.action, AppColors.light.background),
+          greaterThanOrEqualTo(4.5));
+      expect(_contrast(AppColors.light.action, AppColors.light.surface),
+          greaterThanOrEqualTo(4.5));
+      expect(_contrast(AppColors.light.onAction, AppColors.light.action),
           greaterThanOrEqualTo(4.5));
     });
 
     test('every clinical signal clears AA on the page, a card and its chip',
         () {
-      const Map<String, Color> signals = <String, Color>{
-        'pending': AppTheme.pending,
-        'active': AppTheme.active,
-        'danger': AppTheme.danger,
+      final Map<String, Color> signals = <String, Color>{
+        'pending': AppColors.light.pending,
+        'active': AppColors.light.active,
+        'danger': AppColors.light.danger,
       };
-      const Map<String, Color> tints = <String, Color>{
-        'pending': AppTheme.pendingTint,
-        'active': AppTheme.activeTint,
+      final Map<String, Color> tints = <String, Color>{
+        'pending': AppColors.light.pendingTint,
+        'active': AppColors.light.activeTint,
+        'danger': AppColors.light.dangerTint,
       };
 
       signals.forEach((String name, Color color) {
-        expect(_contrast(color, AppTheme.darkBackground),
+        expect(_contrast(color, AppColors.light.background),
+            greaterThanOrEqualTo(4.5),
+            reason: '$name on the page');
+        expect(_contrast(color, AppColors.light.surface),
+            greaterThanOrEqualTo(4.5),
+            reason: '$name on a card');
+        expect(
+          _contrast(
+            color,
+            _tintedSurface(tints[name]!, AppColors.light.surface),
+          ),
+          greaterThanOrEqualTo(4.5),
+          reason: '$name inside its own chip',
+        );
+      });
+    });
+
+    test('the neutrals are warm, not clinical blue', () {
+      // The page and the wells carry a trace of yellow: a warm ivory ground.
+      // The card is pure white, so it reads as paper laid on that ground
+      // rather than as another tint of it.
+      for (final Color warm in <Color>[
+        AppColors.light.background,
+        AppColors.light.surfaceSunken,
+      ]) {
+        final HSLColor hsl = HSLColor.fromColor(warm);
+        expect(hsl.hue, inInclusiveRange(30, 90), reason: '$warm');
+        expect(hsl.saturation, greaterThan(0), reason: '$warm');
+      }
+      expect(AppColors.light.surface, const Color(0xFFFFFFFF));
+    });
+
+    test('the accent is sage and the action is terracotta', () {
+      final HSLColor primary = HSLColor.fromColor(AppColors.light.primary);
+      final HSLColor action = HSLColor.fromColor(AppColors.light.action);
+      // Sage sits near 155 deg; terracotta near 20 deg.
+      expect(primary.hue, inInclusiveRange(140, 175));
+      expect(action.hue, inInclusiveRange(5, 35));
+    });
+  });
+
+  group('the dark palette', () {
+    test('body text clears AAA on the page and on a card', () {
+      expect(_contrast(AppColors.dark.label, AppColors.dark.background),
+          greaterThanOrEqualTo(7));
+      expect(_contrast(AppColors.dark.label, AppColors.dark.surface),
+          greaterThanOrEqualTo(7));
+    });
+
+    test('supporting text clears AA on the page and on a card', () {
+      expect(
+          _contrast(AppColors.dark.secondaryLabel, AppColors.dark.background),
+          greaterThanOrEqualTo(4.5));
+      expect(_contrast(AppColors.dark.secondaryLabel, AppColors.dark.surface),
+          greaterThanOrEqualTo(4.5));
+    });
+
+    test('the accents read as text and can carry a label', () {
+      expect(_contrast(AppColors.dark.primary, AppColors.dark.background),
+          greaterThanOrEqualTo(4.5));
+      expect(_contrast(AppColors.dark.primary, AppColors.dark.surface),
+          greaterThanOrEqualTo(4.5));
+      expect(_contrast(AppColors.dark.onPrimary, AppColors.dark.primary),
+          greaterThanOrEqualTo(4.5));
+      expect(_contrast(AppColors.dark.action, AppColors.dark.background),
+          greaterThanOrEqualTo(4.5));
+      expect(_contrast(AppColors.dark.onAction, AppColors.dark.action),
+          greaterThanOrEqualTo(4.5));
+    });
+
+    test('every clinical signal clears AA on the page, a card and its chip',
+        () {
+      final Map<String, Color> signals = <String, Color>{
+        'pending': AppColors.dark.pending,
+        'active': AppColors.dark.active,
+        'danger': AppColors.dark.danger,
+      };
+      final Map<String, Color> tints = <String, Color>{
+        'pending': AppColors.dark.pendingTint,
+        'active': AppColors.dark.activeTint,
+        'danger': AppColors.dark.dangerTint,
+      };
+
+      signals.forEach((String name, Color color) {
+        expect(_contrast(color, AppColors.dark.background),
             greaterThanOrEqualTo(4.5),
             reason: '$name on the page');
         expect(
-            _contrast(color, AppTheme.darkSurface), greaterThanOrEqualTo(4.5),
+            _contrast(color, AppColors.dark.surface), greaterThanOrEqualTo(4.5),
             reason: '$name on a card');
-        final Color? tint = tints[name];
-        if (tint != null) {
-          expect(
-            _contrast(
-              color,
-              _tintedSurface(tint, AppTheme.darkSurface),
-            ),
-            greaterThanOrEqualTo(4.5),
-            reason: '$name inside its own chip',
-          );
-        }
+        expect(
+          _contrast(
+            color,
+            _tintedSurface(tints[name]!, AppColors.dark.surface),
+          ),
+          greaterThanOrEqualTo(4.5),
+          reason: '$name inside its own chip',
+        );
       });
     });
   });
 
-  group('the palette is Apple Dark Mode, not a warm room', () {
-    test('the neutrals are colourless greys', () {
-      const List<Color> neutrals = <Color>[
-        AppTheme.darkBackground,
-        AppTheme.darkSurface,
-        AppTheme.darkSurfaceSecondary,
-        AppTheme.darkSeparator,
-        AppTheme.darkLabel,
-      ];
+  group('the themes', () {
+    testWidgets('each mood installs its own colours', (
+      WidgetTester tester,
+    ) async {
+      Future<AppColors> coloursOf(ThemeData theme) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Builder(
+              builder: (BuildContext context) => const SizedBox.shrink(),
+            ),
+          ),
+        );
+        // The app animates its theme in, so the extension is interpolated on
+        // the first frame and only settles to the mood's own colours after.
+        await tester.pumpAndSettle();
+        return AppColors.of(
+          tester.element(find.byType(SizedBox).first),
+        );
+      }
 
-      for (final Color neutral in neutrals) {
-        final HSLColor hsl = HSLColor.fromColor(neutral);
-        // Colourless in practice: Apple's system greys carry a trace of blue
-        // (about 3% on #1C1C1E). Anything past this is a tinted room.
-        expect(hsl.saturation, lessThanOrEqualTo(0.04), reason: '$neutral');
+      expect(await coloursOf(AppTheme.light()), AppColors.light);
+      expect(await coloursOf(AppTheme.dark()), AppColors.dark);
+    });
+
+    test('the page uses the background of the mood and the card its surface',
+        () {
+      expect(
+          AppTheme.light().scaffoldBackgroundColor, AppColors.light.background);
+      expect(AppTheme.light().colorScheme.surface, AppColors.light.surface);
+      expect(
+          AppTheme.dark().scaffoldBackgroundColor, AppColors.dark.background);
+      expect(AppTheme.dark().colorScheme.surface, AppColors.dark.surface);
+    });
+
+    test('body text is never below 15pt and never tighter than 1.5', () {
+      for (final ThemeData theme in <ThemeData>[
+        AppTheme.light(),
+        AppTheme.dark(),
+      ]) {
+        final TextTheme text = theme.textTheme;
+        for (final TextStyle? style in <TextStyle?>[
+          text.bodyLarge,
+          text.bodyMedium,
+          text.bodySmall,
+        ]) {
+          expect(style, isNotNull);
+          expect(style!.fontSize, greaterThanOrEqualTo(13));
+          expect(style.height, greaterThanOrEqualTo(1.5));
+        }
+        expect(text.bodyLarge!.fontSize, greaterThanOrEqualTo(15));
+        expect(text.bodyMedium!.fontSize, greaterThanOrEqualTo(15));
       }
     });
 
-    test('the accent is system teal, saturated enough to hold on grey', () {
-      final HSLColor accent = HSLColor.fromColor(AppTheme.accentMint);
-      // System Teal sits near 197 deg. Sage was 125-150; that range must fail.
-      expect(accent.hue, inInclusiveRange(185, 210));
-      expect(accent.saturation, greaterThanOrEqualTo(0.8));
-    });
-
-    test('there is no separate warm highlight', () {
-      expect(AppTheme.warmHighlight, AppTheme.accentMint);
-    });
-
-    test('the theme is dark, and the page uses the base colour', () {
-      final ThemeData theme = AppTheme.dark();
-
-      expect(theme.colorScheme.brightness, Brightness.dark);
-      expect(theme.scaffoldBackgroundColor, AppTheme.darkBackground);
-      expect(theme.colorScheme.surface, AppTheme.darkSurface);
-      expect(theme.colorScheme.onSurface, AppTheme.darkLabel);
-      expect(theme.colorScheme.onSurfaceVariant, AppTheme.darkSecondaryLabel);
+    test('the two families are the ones that were bundled', () {
+      final TextTheme text = AppTheme.light().textTheme;
+      expect(text.displayLarge!.fontFamily, AppTheme.displayFont);
+      expect(text.headlineMedium!.fontFamily, AppTheme.displayFont);
+      expect(text.bodyLarge!.fontFamily, AppTheme.bodyFont);
+      expect(text.labelMedium!.fontFamily, AppTheme.bodyFont);
     });
   });
 }

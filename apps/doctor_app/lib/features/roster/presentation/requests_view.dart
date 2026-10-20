@@ -148,15 +148,15 @@ class _RequestRow extends StatelessWidget {
             children: <Widget>[
               CircleAvatar(
                 radius: 20,
-                backgroundColor: AppTheme.pendingTint,
+                backgroundColor: AppColors.of(context).pendingTint,
                 child: Text(
                   request.patientName.isEmpty
                       ? '?'
                       : request.patientName[0].toUpperCase(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.pending,
+                    color: AppColors.of(context).pending,
                   ),
                 ),
               ),
@@ -178,9 +178,9 @@ class _RequestRow extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       'Requested ${formatMonthDayYear(request.requestedAt)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppTheme.darkSecondaryLabel,
+                        color: AppColors.of(context).secondaryLabel,
                       ),
                     ),
                   ],
@@ -229,7 +229,8 @@ class _Feedback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool failure = message.toLowerCase().contains('not found');
-    final Color color = failure ? AppTheme.danger : AppTheme.active;
+    final Color color =
+        failure ? AppColors.of(context).danger : AppColors.of(context).active;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(

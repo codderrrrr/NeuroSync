@@ -64,16 +64,16 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        backgroundColor: AppTheme.darkBackground,
+        backgroundColor: AppColors.of(context).background,
         title: const Text('Remove this exercise?'),
         content: Text(
           '${assignment.assessmentTitle} will no longer appear for '
           '${widget.patientName}. Anything they have already recorded is '
           'kept.',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             height: 1.4,
-            color: AppTheme.darkSecondaryLabel,
+            color: AppColors.of(context).secondaryLabel,
           ),
         ),
         actions: <Widget>[
@@ -83,9 +83,9 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text(
+            child: Text(
               'Remove',
-              style: TextStyle(color: AppTheme.danger),
+              style: TextStyle(color: AppColors.of(context).danger),
             ),
           ),
         ],
@@ -104,7 +104,7 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
   Widget build(BuildContext context) {
     final AssignmentController assignments = AppScope.of(context).assignments;
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppColors.of(context).background,
       body: SafeArea(
         child: PortalPage(
           title: widget.patientName,
@@ -235,9 +235,9 @@ class _ExerciseRow extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       assignment.assessmentTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppTheme.darkSecondaryLabel,
+                        color: AppColors.of(context).secondaryLabel,
                       ),
                     ),
                   ],
@@ -245,9 +245,9 @@ class _ExerciseRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               if (assignment.isRemoved)
-                const StatusTag(
+                StatusTag(
                   label: 'REMOVED',
-                  color: AppTheme.darkSecondaryLabel,
+                  color: AppColors.of(context).secondaryLabel,
                   tint: Color(0x22000000),
                 )
               else
@@ -319,10 +319,10 @@ class _SettingsSummary extends StatelessWidget {
         .toList(growable: false);
     return Text(
       parts.join(' · '),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
         height: 1.4,
-        color: AppTheme.darkSecondaryLabel,
+        color: AppColors.of(context).secondaryLabel,
       ),
     );
   }
@@ -366,7 +366,9 @@ class _RowAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color = danger ? AppTheme.danger : AppTheme.darkSecondaryLabel;
+    final Color color = danger
+        ? AppColors.of(context).danger
+        : AppColors.of(context).secondaryLabel;
     return TextButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 16, color: color),

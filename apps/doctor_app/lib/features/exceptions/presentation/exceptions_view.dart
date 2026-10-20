@@ -190,11 +190,11 @@ class _HeadCell extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.7,
-          color: AppTheme.darkSecondaryLabel,
+          color: AppColors.of(context).secondaryLabel,
         ),
       ),
     );

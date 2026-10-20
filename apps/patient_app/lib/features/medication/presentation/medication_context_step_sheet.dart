@@ -218,7 +218,7 @@ class _ChoiceChip extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Material(
       color: isSelected
-          ? AppTheme.accentMint.withValues(alpha: 0.16)
+          ? AppColors.of(context).primary.withValues(alpha: 0.16)
           : scheme.surface,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
@@ -229,7 +229,9 @@ class _ChoiceChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: isSelected ? AppTheme.accentMint : scheme.outlineVariant,
+              color: isSelected
+                  ? AppColors.of(context).primary
+                  : scheme.outlineVariant,
             ),
           ),
           child: Text(
@@ -237,7 +239,9 @@ class _ChoiceChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? AppTheme.accentMint : scheme.onSurfaceVariant,
+              color: isSelected
+                  ? AppColors.of(context).primary
+                  : scheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -292,7 +296,7 @@ class _MedicationOption extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: isSelected
-            ? AppTheme.accentMint.withValues(alpha: 0.12)
+            ? AppColors.of(context).primary.withValues(alpha: 0.12)
             : scheme.surface,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
@@ -303,7 +307,9 @@ class _MedicationOption extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? AppTheme.accentMint : scheme.outlineVariant,
+                color: isSelected
+                    ? AppColors.of(context).primary
+                    : scheme.outlineVariant,
               ),
             ),
             child: Row(
@@ -313,7 +319,9 @@ class _MedicationOption extends StatelessWidget {
                       ? Icons.radio_button_checked
                       : Icons.radio_button_unchecked,
                   size: 20,
-                  color: isSelected ? AppTheme.accentMint : scheme.outline,
+                  color: isSelected
+                      ? AppColors.of(context).primary
+                      : scheme.outline,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

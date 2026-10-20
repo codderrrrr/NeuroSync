@@ -31,27 +31,29 @@ class SessionResultScreen extends StatelessWidget {
   /// Null only for a session recorded before the longitudinal layer existed.
   final LongitudinalSummary? longitudinal;
 
-  Color get _qualityColor {
+  Color _qualityColor(BuildContext context) {
+    final AppColors colors = AppColors.of(context);
     switch (result.quality) {
       case RecordingQuality.valid:
-        return AppTheme.active;
+        return colors.active;
       case RecordingQuality.borderline:
-        return AppTheme.pending;
+        return colors.pending;
       case RecordingQuality.invalid:
       case RecordingQuality.incomplete:
-        return AppTheme.danger;
+        return colors.danger;
     }
   }
 
-  Color get _qualityTint {
+  Color _qualityTint(BuildContext context) {
+    final AppColors colors = AppColors.of(context);
     switch (result.quality) {
       case RecordingQuality.valid:
-        return AppTheme.activeTint;
+        return colors.activeTint;
       case RecordingQuality.borderline:
-        return AppTheme.pendingTint;
+        return colors.pendingTint;
       case RecordingQuality.invalid:
       case RecordingQuality.incomplete:
-        return AppTheme.danger.withValues(alpha: 0.12);
+        return colors.danger.withValues(alpha: 0.12);
     }
   }
 
@@ -105,7 +107,7 @@ class SessionResultScreen extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: _qualityTint,
+                          color: _qualityTint(context),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
@@ -113,7 +115,7 @@ class SessionResultScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: _qualityColor,
+                            color: _qualityColor(context),
                             letterSpacing: 0.6,
                           ),
                         ),
@@ -248,11 +250,11 @@ class _HeadlineStat extends StatelessWidget {
         children: <Widget>[
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.7,
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
             ),
           ),
           const SizedBox(height: 8),
@@ -300,10 +302,10 @@ class _ResultRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: AppTheme.darkLabel,
+              color: AppColors.of(context).label,
             ),
           ),
         ],
@@ -319,27 +321,29 @@ class _LongitudinalCard extends StatelessWidget {
 
   final LongitudinalSummary summary;
 
-  Color get _color {
+  Color _color(BuildContext context) {
+    final AppColors colors = AppColors.of(context);
     switch (summary.state) {
       case LongitudinalState.withinBaseline:
-        return AppTheme.active;
+        return colors.active;
       case LongitudinalState.changed:
-        return AppTheme.pending;
+        return colors.pending;
       case LongitudinalState.insufficientData:
       case LongitudinalState.unreliable:
-        return AppTheme.accentMint;
+        return colors.primary;
     }
   }
 
-  Color get _tint {
+  Color _tint(BuildContext context) {
+    final AppColors colors = AppColors.of(context);
     switch (summary.state) {
       case LongitudinalState.withinBaseline:
-        return AppTheme.activeTint;
+        return colors.activeTint;
       case LongitudinalState.changed:
-        return AppTheme.pendingTint;
+        return colors.pendingTint;
       case LongitudinalState.insufficientData:
       case LongitudinalState.unreliable:
-        return AppTheme.accentMint.withValues(alpha: 0.12);
+        return colors.primary.withValues(alpha: 0.12);
     }
   }
 
@@ -352,18 +356,18 @@ class _LongitudinalCard extends StatelessWidget {
         children: <Widget>[
           Text(
             'YOUR MONITORING RESULT',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.7,
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
             ),
           ),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: _tint,
+              color: _tint(context),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -371,7 +375,7 @@ class _LongitudinalCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: _color,
+                color: _color(context),
                 letterSpacing: 0.6,
               ),
             ),
@@ -380,11 +384,11 @@ class _LongitudinalCard extends StatelessWidget {
           // The headline is the plain-language state; the numbers live below it.
           Text(
             summary.state.label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               height: 1.25,
-              color: AppTheme.darkLabel,
+              color: AppColors.of(context).label,
             ),
           ),
           const SizedBox(height: 8),
@@ -444,13 +448,13 @@ class _MedicationContextCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
+          Text(
             'MEDICATION CONTEXT',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.7,
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
             ),
           ),
           const SizedBox(height: 10),
@@ -458,7 +462,7 @@ class _MedicationContextCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: contextTag.isKnown
-                  ? AppTheme.accentMint.withValues(alpha: 0.12)
+                  ? AppColors.of(context).primary.withValues(alpha: 0.12)
                   : scheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(999),
             ),
@@ -468,7 +472,7 @@ class _MedicationContextCard extends StatelessWidget {
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: contextTag.isKnown
-                    ? AppTheme.accentMint
+                    ? AppColors.of(context).primary
                     : scheme.onSurfaceVariant,
                 letterSpacing: 0.6,
               ),

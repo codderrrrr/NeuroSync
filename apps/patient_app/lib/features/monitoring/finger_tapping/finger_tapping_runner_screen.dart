@@ -287,10 +287,10 @@ class _RecordingView extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     '$remainingSeconds',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 44,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.accentMint,
+                      color: AppColors.of(context).primary,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -310,7 +310,7 @@ class _RecordingView extends StatelessWidget {
                   value: progress,
                   minHeight: 6,
                   backgroundColor: scheme.surfaceContainerHighest,
-                  color: AppTheme.accentMint,
+                  color: AppColors.of(context).primary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -340,7 +340,7 @@ class _RecordingView extends StatelessWidget {
                         Icon(
                           Icons.touch_app_outlined,
                           size: 56,
-                          color: AppTheme.accentMint,
+                          color: AppColors.of(context).primary,
                         ),
                         const SizedBox(height: 12),
                         Text(

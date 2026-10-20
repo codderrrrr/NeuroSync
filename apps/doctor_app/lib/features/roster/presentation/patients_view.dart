@@ -225,11 +225,11 @@ class _HeadCell extends StatelessWidget {
       child: Text(
         label.toUpperCase(),
         textAlign: align,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.7,
-          color: AppTheme.darkSecondaryLabel,
+          color: AppColors.of(context).secondaryLabel,
         ),
       ),
     );
@@ -329,8 +329,8 @@ class _PatientRowState extends State<_PatientRow> {
                         alignment: Alignment.centerLeft,
                         child: StatusTag(
                           label: patient.status.toUpperCase(),
-                          color: AppTheme.active,
-                          tint: AppTheme.activeTint,
+                          color: AppColors.of(context).active,
+                          tint: AppColors.of(context).activeTint,
                         ),
                       ),
                     ),
@@ -415,17 +415,17 @@ class _PatientList extends StatelessWidget {
                   ),
                   StatusTag(
                     label: patient.status.toUpperCase(),
-                    color: AppTheme.active,
-                    tint: AppTheme.activeTint,
+                    color: AppColors.of(context).active,
+                    tint: AppColors.of(context).activeTint,
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
                 'Linked ${formatMonthDayYear(patient.linkedAt)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: AppTheme.darkSecondaryLabel,
+                  color: AppColors.of(context).secondaryLabel,
                 ),
               ),
             ],
@@ -455,10 +455,10 @@ class _SearchField extends StatelessWidget {
         ),
         decoration: InputDecoration(
           hintText: 'Search patients by name',
-          prefixIcon: const Icon(
+          prefixIcon: Icon(
             Icons.search,
             size: 19,
-            color: AppTheme.darkSecondaryLabel,
+            color: AppColors.of(context).secondaryLabel,
           ),
           prefixIconConstraints:
               const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -472,7 +472,7 @@ class _SearchField extends StatelessWidget {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: AppTheme.darkSeparator),
+            borderSide: BorderSide(color: AppColors.of(context).separator),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(9),

@@ -206,10 +206,10 @@ class _PageHeader extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             subtitle!,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               height: 1.4,
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
             ),
           ),
         ],

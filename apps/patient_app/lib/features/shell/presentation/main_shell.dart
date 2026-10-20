@@ -104,7 +104,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: _select,
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: AppColors.of(context).surface,
         surfaceTintColor: Colors.transparent,
         destinations: const <NavigationDestination>[
           NavigationDestination(

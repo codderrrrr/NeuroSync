@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppColors.of(context).background,
       body: IntroTextScale(
         child: SafeArea(
           child: Center(

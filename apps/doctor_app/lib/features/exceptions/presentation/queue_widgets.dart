@@ -24,8 +24,11 @@ class StatusTagForException extends StatelessWidget {
     final bool isOpen = status == 'open';
     return StatusTag(
       label: status.toUpperCase(),
-      color: isOpen ? AppTheme.pending : AppTheme.active,
-      tint: isOpen ? AppTheme.pendingTint : AppTheme.activeTint,
+      color:
+          isOpen ? AppColors.of(context).pending : AppColors.of(context).active,
+      tint: isOpen
+          ? AppColors.of(context).pendingTint
+          : AppColors.of(context).activeTint,
     );
   }
 }
@@ -44,7 +47,7 @@ class EvidenceTag extends StatelessWidget {
   Widget build(BuildContext context) {
     return StatusTag(
       label: evidenceLabel(strength).toUpperCase(),
-      color: AppTheme.darkSecondaryLabel,
+      color: AppColors.of(context).secondaryLabel,
       tint: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07),
     );
   }

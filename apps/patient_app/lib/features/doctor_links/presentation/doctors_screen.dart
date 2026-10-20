@@ -50,8 +50,8 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
             // so the patient can pull to check without restarting the app.
             return RefreshIndicator(
               onRefresh: links.load,
-              color: AppTheme.accentMint,
-              backgroundColor: AppTheme.darkSurface,
+              color: AppColors.of(context).primary,
+              backgroundColor: AppColors.of(context).surface,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),

@@ -149,9 +149,9 @@ class _LongitudinalChip extends StatelessWidget {
     final Color color;
     switch (state) {
       case LongitudinalState.withinBaseline:
-        color = AppTheme.active;
+        color = AppColors.of(context).active;
       case LongitudinalState.changed:
-        color = AppTheme.pending;
+        color = AppColors.of(context).pending;
       case LongitudinalState.insufficientData:
       case LongitudinalState.unreliable:
         color = scheme.onSurfaceVariant;

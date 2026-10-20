@@ -205,7 +205,7 @@ class _CanvasRunnerScreenState extends State<CanvasRunnerScreen> {
     final bool? leave = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        backgroundColor: AppTheme.darkBackground,
+        backgroundColor: AppColors.of(context).background,
         title: const Text('Leave without sending?'),
         content: const Text(
           'This recording has not been sent yet, so it will be lost.',
@@ -218,8 +218,8 @@ class _CanvasRunnerScreenState extends State<CanvasRunnerScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child:
-                const Text('Leave', style: TextStyle(color: AppTheme.danger)),
+            child: Text('Leave',
+                style: TextStyle(color: AppColors.of(context).danger)),
           ),
         ],
       ),
@@ -329,13 +329,13 @@ class _PreparationView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                Text(
                   'YOUR DOCTOR SET THIS TEST UP AS',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.7,
-                    color: AppTheme.darkSecondaryLabel,
+                    color: AppColors.of(context).secondaryLabel,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -349,19 +349,19 @@ class _PreparationView extends StatelessWidget {
                           width: 96,
                           child: Text(
                             setting.label,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: AppTheme.darkSecondaryLabel,
+                              color: AppColors.of(context).secondaryLabel,
                             ),
                           ),
                         ),
                         Expanded(
                           child: Text(
                             setting.value,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: AppTheme.darkLabel,
+                              color: AppColors.of(context).label,
                             ),
                           ),
                         ),
@@ -458,10 +458,10 @@ class _RecordingView extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     '$remainingSeconds',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 44,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.accentMint,
+                      color: AppColors.of(context).primary,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -479,7 +479,7 @@ class _RecordingView extends StatelessWidget {
                   value: progress,
                   minHeight: 6,
                   backgroundColor: scheme.surfaceContainerHighest,
-                  color: AppTheme.accentMint,
+                  color: AppColors.of(context).primary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -531,9 +531,10 @@ class _RecordingView extends StatelessWidget {
                               strokes: strokes,
                               completedStrokes: completedStrokes,
                               pointCount: pointCount,
-                              inkColor: AppTheme.accentMint,
-                              activeInkColor:
-                                  AppTheme.accentMint.withValues(alpha: 0.55),
+                              inkColor: AppColors.of(context).primary,
+                              activeInkColor: AppColors.of(context)
+                                  .primary
+                                  .withValues(alpha: 0.55),
                             ),
                           ),
                         ],
@@ -595,7 +596,9 @@ class _PassTracker extends StatelessWidget {
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: isFinished ? AppTheme.active : scheme.onSurfaceVariant,
+            color: isFinished
+                ? AppColors.of(context).active
+                : scheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 8),
@@ -610,7 +613,7 @@ class _PassTracker extends StatelessWidget {
                   height: 6,
                   decoration: BoxDecoration(
                     color: index < done
-                        ? AppTheme.accentMint
+                        ? AppColors.of(context).primary
                         : scheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(999),
                   ),

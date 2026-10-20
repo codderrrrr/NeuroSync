@@ -14,8 +14,11 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isActive = status == DoctorLinkStatus.active;
-    final Color color = isActive ? AppTheme.active : AppTheme.pending;
-    final Color tint = isActive ? AppTheme.activeTint : AppTheme.pendingTint;
+    final Color color =
+        isActive ? AppColors.of(context).active : AppColors.of(context).pending;
+    final Color tint = isActive
+        ? AppColors.of(context).activeTint
+        : AppColors.of(context).pendingTint;
 
     return StatusTag(label: status.label, color: color, tint: tint);
   }

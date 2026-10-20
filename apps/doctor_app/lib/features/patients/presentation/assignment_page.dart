@@ -143,7 +143,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
     final AssignmentController assignments = _assignments;
 
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppColors.of(context).background,
       body: SafeArea(
         child: PortalPage(
           title: _isEditing ? 'Edit exercise' : 'Assign exercise',
@@ -214,13 +214,13 @@ class _AssignmentPageState extends State<AssignmentPage> {
                       counterText: '',
                     ),
                   ),
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
                       'Optional. Defaults to the test name.',
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppTheme.darkSecondaryLabel,
+                        color: AppColors.of(context).secondaryLabel,
                       ),
                     ),
                   ),
@@ -275,11 +275,11 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10, left: 2),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.7,
-          color: AppTheme.darkSecondaryLabel,
+          color: AppColors.of(context).secondaryLabel,
         ),
       ),
     );
@@ -395,14 +395,16 @@ class _AssessmentCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: option.isSupported
                         ? scheme.primary.withValues(alpha: 0.14)
-                        : AppTheme.darkSecondaryLabel.withValues(alpha: 0.12),
+                        : AppColors.of(context)
+                            .secondaryLabel
+                            .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(11),
                   ),
                   child: Icon(
                     _icon,
                     color: option.isSupported
                         ? scheme.primary
-                        : AppTheme.darkSecondaryLabel,
+                        : AppColors.of(context).secondaryLabel,
                     size: 20,
                   ),
                 ),
@@ -429,8 +431,8 @@ class _AssessmentCard extends StatelessWidget {
                           fontSize: 13,
                           height: 1.35,
                           color: option.isSupported
-                              ? AppTheme.darkSecondaryLabel
-                              : AppTheme.pending,
+                              ? AppColors.of(context).secondaryLabel
+                              : AppColors.of(context).pending,
                         ),
                       ),
                       // A tag as well as the sentence, so a doctor scanning the
@@ -438,10 +440,10 @@ class _AssessmentCard extends StatelessWidget {
                       // each description.
                       if (!option.isSupported) ...<Widget>[
                         const SizedBox(height: 8),
-                        const StatusTag(
+                        StatusTag(
                           label: 'COMING SOON',
-                          color: AppTheme.pending,
-                          tint: AppTheme.pendingTint,
+                          color: AppColors.of(context).pending,
+                          tint: AppColors.of(context).pendingTint,
                         ),
                       ],
                     ],
@@ -511,10 +513,10 @@ class _ParameterShell extends StatelessWidget {
               Expanded(
                 child: Text(
                   parameter.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.darkLabel,
+                    color: AppColors.of(context).label,
                   ),
                 ),
               ),
@@ -524,10 +526,10 @@ class _ParameterShell extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             parameter.helpText,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               height: 1.35,
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
             ),
           ),
           const SizedBox(height: 12),
@@ -684,9 +686,9 @@ class _DurationField extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'seconds',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: AppTheme.darkSecondaryLabel,
+                  color: AppColors.of(context).secondaryLabel,
                 ),
               ),
             ],
@@ -793,14 +795,16 @@ class _HeldBackNote extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.pendingTint,
+        color: AppColors.of(context).pendingTint,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.pending.withValues(alpha: 0.4)),
+        border: Border.all(
+            color: AppColors.of(context).pending.withValues(alpha: 0.4)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(Icons.schedule_outlined, size: 18, color: AppTheme.pending),
+          Icon(Icons.schedule_outlined,
+              size: 18, color: AppColors.of(context).pending),
           SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -810,7 +814,7 @@ class _HeldBackNote extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 height: 1.35,
-                color: AppTheme.pending,
+                color: AppColors.of(context).pending,
               ),
             ),
           ),
@@ -830,18 +834,21 @@ class _ErrorBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.danger.withValues(alpha: 0.10),
+        color: AppColors.of(context).danger.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
+        border: Border.all(
+            color: AppColors.of(context).danger.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.error_outline, size: 18, color: AppTheme.danger),
+          Icon(Icons.error_outline,
+              size: 18, color: AppColors.of(context).danger),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(fontSize: 14, color: AppTheme.danger),
+              style:
+                  TextStyle(fontSize: 14, color: AppColors.of(context).danger),
             ),
           ),
         ],

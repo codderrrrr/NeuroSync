@@ -7,8 +7,7 @@ import 'package:neurosync_core/neurosync_core.dart';
 /// settles and passes through a small loop - movement, continuity and
 /// connection expressed without literal imagery.
 class MovementMarkPainter extends CustomPainter {
-  const MovementMarkPainter(
-      {required this.progress, this.color = AppTheme.accentMint});
+  MovementMarkPainter({required this.progress, required this.color});
 
   /// 0 to 1 draw progress of the line.
   final double progress;
@@ -91,19 +90,24 @@ class MovementMark extends StatelessWidget {
   const MovementMark({
     super.key,
     required this.progress,
-    this.color = AppTheme.accentMint,
+    this.color,
     this.size = const Size(108, 60),
   });
 
   final double progress;
-  final Color color;
+
+  /// The colour of the mark. Left unset, it takes the theme's primary.
+  final Color? color;
   final Size size;
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       size: size,
-      painter: MovementMarkPainter(progress: progress, color: color),
+      painter: MovementMarkPainter(
+        progress: progress,
+        color: color ?? AppColors.of(context).primary,
+      ),
     );
   }
 }

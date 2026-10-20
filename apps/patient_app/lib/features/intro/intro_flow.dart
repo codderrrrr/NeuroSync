@@ -113,7 +113,7 @@ class _IntroFlowState extends State<IntroFlow> {
   /// over with a short crossfade, so neither the handover between stages nor
   /// the frame behind them can flash another colour.
   Widget _crossfade(Widget child) => ColoredBox(
-        color: AppTheme.darkBackground,
+        color: AppColors.of(context).background,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 280),
           child: child,

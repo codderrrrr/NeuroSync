@@ -82,13 +82,13 @@ class _DashboardViewState extends State<DashboardView> {
                   onOpenPatients: widget.onOpenPatients,
                 ),
                 const SizedBox(height: 26),
-                const Text(
+                Text(
                   'RECENTLY LINKED',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.7,
-                    color: AppTheme.darkSecondaryLabel,
+                    color: AppColors.of(context).secondaryLabel,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -129,28 +129,29 @@ class _AttentionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.pending.withValues(alpha: 0.35)),
+        border: Border.all(
+            color: AppColors.of(context).pending.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Icon(
+              Icon(
                 Icons.inbox_outlined,
                 size: 18,
-                color: AppTheme.pending,
+                color: AppColors.of(context).pending,
               ),
               const SizedBox(width: 9),
               Text(
                 remaining == 0
                     ? '1 REQUEST WAITING'
                     : '${remaining + 1} REQUESTS WAITING',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.7,
-                  color: AppTheme.pending,
+                  color: AppColors.of(context).pending,
                 ),
               ),
             ],
@@ -171,10 +172,10 @@ class _AttentionCard extends StatelessWidget {
                 ? 'Wants to link with you. Accepted patients can see the '
                     'exercises you assign them.'
                 : 'And $remaining other ${remaining == 1 ? 'patient' : 'patients'} want to link with you.',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               height: 1.45,
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
             ),
           ),
           const SizedBox(height: 18),
@@ -218,13 +219,13 @@ class _AllClearCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                const Text(
+                Text(
                   'No link requests are waiting. Share your code to grow '
                   'your roster.',
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.4,
-                    color: AppTheme.darkSecondaryLabel,
+                    color: AppColors.of(context).secondaryLabel,
                   ),
                 ),
               ],
@@ -264,9 +265,9 @@ class _RosterSummary extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           patientCount == 1 ? 'active patient' : 'active patients',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
-            color: AppTheme.darkSecondaryLabel,
+            color: AppColors.of(context).secondaryLabel,
           ),
         ),
       ],
@@ -326,9 +327,9 @@ class _RecentlyLinked extends StatelessWidget {
           ),
           Text(
             'Linked ${formatMonthDay(patient.linkedAt)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
             ),
           ),
         ],
@@ -358,12 +359,12 @@ class _NoPatients extends StatelessWidget {
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Patients appear here once you accept their link request.',
             style: TextStyle(
               fontSize: 13,
               height: 1.4,
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
             ),
           ),
           const SizedBox(height: 14),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
 
 /// iOS-style large title used at the top of a screen.
 class LargeTitle extends StatelessWidget {
@@ -75,13 +75,14 @@ class ErrorText extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Icon(Icons.error_outline, size: 18, color: AppTheme.danger),
+        Icon(Icons.error_outline,
+            size: 18, color: AppColors.of(context).danger),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             message,
-            style: const TextStyle(
-                fontSize: 15, color: AppTheme.danger, height: 1.3),
+            style: TextStyle(
+                fontSize: 15, color: AppColors.of(context).danger, height: 1.3),
           ),
         ),
       ],

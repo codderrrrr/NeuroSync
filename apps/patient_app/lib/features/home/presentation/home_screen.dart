@@ -140,8 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
             // than waiting for the shell's next refresh.
             return RefreshIndicator(
               onRefresh: _refresh,
-              color: AppTheme.accentMint,
-              backgroundColor: AppTheme.darkSurface,
+              color: AppColors.of(context).primary,
+              backgroundColor: AppColors.of(context).surface,
               child: ListView(
                 // Keeps the pull available even when the page is shorter than
                 // the viewport, which is the usual case before any plan exists.
@@ -203,9 +203,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        const Icon(
+                        Icon(
                           Icons.chevron_right,
-                          color: AppTheme.darkSecondaryLabel,
+                          color: AppColors.of(context).secondaryLabel,
                         ),
                       ],
                     ),
@@ -265,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 24),
                   SecondaryButton(
                     label: 'Log out',
-                    color: AppTheme.danger,
+                    color: AppColors.of(context).danger,
                     onPressed: _signOut,
                   ),
                 ],
@@ -289,8 +289,8 @@ class _SignedInDot extends StatelessWidget {
         Container(
           width: 7,
           height: 7,
-          decoration: const BoxDecoration(
-            color: AppTheme.active,
+          decoration: BoxDecoration(
+            color: AppColors.of(context).active,
             shape: BoxShape.circle,
           ),
         ),

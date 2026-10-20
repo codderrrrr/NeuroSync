@@ -72,7 +72,7 @@ class _ExceptionDetailPageState extends State<ExceptionDetailPage> {
   Widget build(BuildContext context) {
     final ExceptionController controller = AppScope.of(context).exceptions;
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppColors.of(context).background,
       body: SafeArea(
         child: PortalPage(
           title: 'Review',
@@ -189,10 +189,10 @@ class _RoutingCard extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           detail.summary.rationale,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             height: 1.45,
-            color: AppTheme.darkSecondaryLabel,
+            color: AppColors.of(context).secondaryLabel,
           ),
         ),
         const SizedBox(height: 14),
@@ -204,7 +204,7 @@ class _RoutingCard extends StatelessWidget {
             StatusTag(
               label:
                   evidenceLabel(detail.summary.evidenceStrength).toUpperCase(),
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
               tint: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -213,7 +213,7 @@ class _RoutingCard extends StatelessWidget {
             StatusTag(
               label: '${detail.supportingObservations} SUPPORTING OBSERVATION'
                   '${detail.supportingObservations == 1 ? '' : 'S'}',
-              color: AppTheme.darkSecondaryLabel,
+              color: AppColors.of(context).secondaryLabel,
               tint: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -268,10 +268,10 @@ class _EvidenceCard extends StatelessWidget {
                   'against nothing.'
               : 'Built from ${baseline.observationCount} of this patient\'s own '
                   'recordings, at ${baseline.confidence} confidence.',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             height: 1.4,
-            color: AppTheme.darkSecondaryLabel,
+            color: AppColors.of(context).secondaryLabel,
           ),
         ),
         const SizedBox(height: 16),
@@ -350,9 +350,9 @@ class _ClosedCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           at == null ? 'Recorded by you.' : formatQueueDate(at),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
-            color: AppTheme.darkSecondaryLabel,
+            color: AppColors.of(context).secondaryLabel,
           ),
         ),
         if (detail.reviewNote != null) ...<Widget>[
@@ -420,13 +420,13 @@ class _DecisionCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Recorded against this exception in your own words. Nothing here is '
           'interpreted for you.',
           style: TextStyle(
             fontSize: 13,
             height: 1.4,
-            color: AppTheme.darkSecondaryLabel,
+            color: AppColors.of(context).secondaryLabel,
           ),
         ),
         if (errorMessage != null) ...<Widget>[
@@ -552,9 +552,9 @@ class _FactLine extends StatelessWidget {
             width: 150,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppTheme.darkSecondaryLabel,
+                color: AppColors.of(context).secondaryLabel,
               ),
             ),
           ),
