@@ -155,28 +155,31 @@ void main() {
     }
   });
 
-  group('the roster changes representation with width', () {
-    testWidgets('a wide viewport shows column headers', (
+  group('the roster is a grid of panels', () {
+    testWidgets('a wide viewport gives each patient their own panel', (
       WidgetTester tester,
     ) async {
       await _withSemantics(tester, () async {
         await _pumpPortal(tester, const Size(1440, 900));
         await _goTo(tester, 'Patients');
 
-        expect(find.text('PATIENT'), findsOneWidget);
-        expect(find.text('STATUS'), findsOneWidget);
-        expect(find.text('LINKED'), findsOneWidget);
+        // A panel per patient, rather than a row of columns to read across.
+        expect(find.text('Maya Lindqvist'), findsOneWidget);
+        expect(find.text('Wei'), findsOneWidget);
+        // A long name is clipped rather than overflowing its panel.
+        expect(find.text('Bartholomew Fitzgerald-Kensington'), findsOneWidget);
+        // Each panel carries the same facts a column used to.
+        expect(find.textContaining('Linked'), findsWidgets);
       });
     });
 
-    testWidgets('a narrow viewport drops them for a list', (
+    testWidgets('a narrow viewport keeps one panel per patient', (
       WidgetTester tester,
     ) async {
       await _withSemantics(tester, () async {
         await _pumpPortal(tester, const Size(480, 900));
         await _goTo(tester, 'Patients');
 
-        expect(find.text('PATIENT'), findsNothing);
         expect(find.text('Maya Lindqvist'), findsOneWidget);
         // The list carries the same information without columns.
         expect(find.textContaining('Linked'), findsWidgets);

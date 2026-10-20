@@ -131,7 +131,11 @@ class _PatientsViewState extends State<PatientsView> {
   }
 }
 
-/// The table on wide viewports, the list on narrow ones.
+/// The roster as a grid of soft panels, one per patient.
+///
+/// A table asks a clinician to read across a row of columns and hold the
+/// columns in their head. A grid of panels lets them take in one patient at a
+/// time, which is how a clinician actually works: one person, then the next.
 class _RosterBody extends StatelessWidget {
   const _RosterBody({
     required this.patients,
@@ -145,126 +149,61 @@ class _RosterBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        if (constraints.maxWidth < 720) {
-          return _PatientList(patients: patients, onOpen: onOpen);
-        }
-        return _PatientTable(
-          patients: patients,
-          total: total,
-          onOpen: onOpen,
-        );
-      },
-    );
-  }
-}
-
-class _PatientTable extends StatelessWidget {
-  const _PatientTable({
-    required this.patients,
-    required this.total,
-    required this.onOpen,
-  });
-
-  final List<RosterPatient> patients;
-  final int total;
-  final void Function(RosterPatient patient) onOpen;
-
-  static const double _nameColumn = 0.46;
-  static const double _statusColumn = 0.2;
-  static const double _dateColumn = 0.26;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              flex: (_nameColumn * 100).round(),
-              child: const _HeadCell('Patient'),
-            ),
-            Expanded(
-              flex: (_statusColumn * 100).round(),
-              child: const _HeadCell('Status'),
-            ),
-            Expanded(
-              flex: (_dateColumn * 100).round(),
-              child: const _HeadCell('Linked', align: TextAlign.end),
-            ),
-          ],
+    if (patients.isEmpty) {
+      return const Center(
+        child: EmptyState(
+          icon: Icons.people_outline,
+          title: 'No patients yet',
+          message: 'Patients appear here once they accept a link request.',
         ),
-        const SizedBox(height: 10),
-        Expanded(
-          child: ListView.separated(
-            itemCount: patients.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 2),
-            itemBuilder: (BuildContext context, int index) => _PatientRow(
-              patient: patients[index],
-              onOpen: () => onOpen(patients[index]),
-            ),
-          ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: <Widget>[
+        BentoGrid(
+          columns: 2,
+          cells: <Widget>[
+            for (final RosterPatient patient in patients)
+              _PatientCard(patient: patient, onOpen: () => onOpen(patient)),
+          ],
         ),
       ],
     );
   }
 }
 
-class _HeadCell extends StatelessWidget {
-  const _HeadCell(this.label, {this.align = TextAlign.start});
-
-  final String label;
-  final TextAlign align;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Text(
-        label.toUpperCase(),
-        textAlign: align,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.7,
-          color: AppColors.of(context).secondaryLabel,
-        ),
-      ),
-    );
-  }
-}
-
-/// A hoverable, focusable table row.
+/// One patient, as a panel.
 ///
-/// The whole row is the target and it says so: a hover wash, a visible focus
-/// ring and a chevron that darkens. Only a hairline separates rows, so the
-/// table stays flat and scannable.
-class _PatientRow extends StatefulWidget {
-  const _PatientRow({required this.patient, required this.onOpen});
+/// What is on it is what the portal actually knows: who they are, when they
+/// linked, and how many exercises they have been given. It does not claim to
+/// know how they are doing, because the portal cannot see that.
+class _PatientCard extends StatefulWidget {
+  const _PatientCard({required this.patient, required this.onOpen});
 
   final RosterPatient patient;
   final VoidCallback onOpen;
 
   @override
-  State<_PatientRow> createState() => _PatientRowState();
+  State<_PatientCard> createState() => _PatientCardState();
 }
 
-class _PatientRowState extends State<_PatientRow> {
+class _PatientCardState extends State<_PatientCard> {
   bool _hovered = false;
   bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final AppColors colors = AppColors.of(context);
     final bool active = _hovered || _focused;
     final RosterPatient patient = widget.patient;
 
     return Semantics(
       button: true,
       label:
-          '${patient.patientName}, active, linked ${formatMonthDayYear(patient.linkedAt)}',
+          '${patient.patientName}, ${patient.status}, linked ${formatMonthDayYear(patient.linkedAt)}',
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
@@ -290,82 +229,67 @@ class _PatientRowState extends State<_PatientRow> {
                 },
               ),
             },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              height: 58,
-              decoration: BoxDecoration(
-                color: active
-                    ? scheme.primary.withValues(alpha: 0.07)
-                    : scheme.surface,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: _focused ? scheme.primary : Colors.transparent,
-                  width: 1.5,
-                ),
-              ),
-              child: Row(
+            child: BentoCell(
+              onTap: widget.onOpen,
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Expanded(
-                    flex: 46,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        patient.patientName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: scheme.onSurface,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          patient.patientName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTheme.displayFont,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                            color: scheme.onSurface,
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      StatusTag(
+                        label: patient.status.toUpperCase(),
+                        color: colors.active,
+                        tint: colors.activeTint,
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    flex: 20,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: StatusTag(
-                          label: patient.status.toUpperCase(),
-                          color: AppColors.of(context).active,
-                          tint: AppColors.of(context).activeTint,
+                  const SizedBox(height: 14),
+                  Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.link,
+                        size: 16,
+                        color: colors.secondaryLabel,
+                      ),
+                      const SizedBox(width: 6),
+                      // The date yields before the chevron does: the chevron
+                      // is the affordance, the date is context.
+                      Expanded(
+                        child: Text(
+                          'Linked ${formatMonthDayYear(patient.linkedAt)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: colors.secondaryLabel,
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 26,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: <Widget>[
-                          // The date yields before the chevron does: the
-                          // chevron is the affordance, the date is context.
-                          Flexible(
-                            child: Text(
-                              formatMonthDayYear(patient.linkedAt),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.chevron_right,
-                            size: 18,
-                            color: active
-                                ? scheme.primary
-                                : scheme.onSurfaceVariant,
-                          ),
-                        ],
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: active ? colors.primary : colors.secondaryLabel,
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -373,65 +297,6 @@ class _PatientRowState extends State<_PatientRow> {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// The narrow-viewport roster: identity and status, nothing that needs a
-/// column to be read.
-class _PatientList extends StatelessWidget {
-  const _PatientList({required this.patients, required this.onOpen});
-
-  final List<RosterPatient> patients;
-  final void Function(RosterPatient patient) onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      itemCount: patients.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (BuildContext context, int index) {
-        final RosterPatient patient = patients[index];
-        return PortalNavItem(
-          onTap: () => onOpen(patient),
-          semanticLabel: 'Open ${patient.patientName}',
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      patient.patientName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  StatusTag(
-                    label: patient.status.toUpperCase(),
-                    color: AppColors.of(context).active,
-                    tint: AppColors.of(context).activeTint,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Linked ${formatMonthDayYear(patient.linkedAt)}',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.of(context).secondaryLabel,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

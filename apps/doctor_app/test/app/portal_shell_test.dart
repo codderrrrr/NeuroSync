@@ -126,7 +126,7 @@ void main() {
   });
 
   group('roster', () {
-    testWidgets('renders patients as a table on a wide viewport',
+    testWidgets('renders each patient as their own panel',
         (WidgetTester tester) async {
       await pumpDoctorScreen(
         tester,
@@ -144,11 +144,10 @@ void main() {
       await tester.tap(find.text('Patients'));
       await tester.pumpAndSettle();
 
-      expect(find.text('PATIENT'), findsOneWidget);
-      expect(find.text('STATUS'), findsOneWidget);
-      expect(find.text('LINKED'), findsOneWidget);
       expect(find.text('Maya Lindqvist'), findsOneWidget);
       expect(find.text('Ada Lovelace'), findsOneWidget);
+      // Each panel carries the same facts a column used to.
+      expect(find.textContaining('Linked'), findsWidgets);
     });
 
     testWidgets('explains an empty roster instead of showing a blank table',
@@ -164,7 +163,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No patients yet'), findsOneWidget);
-      expect(find.text('PATIENT'), findsNothing);
     });
 
     testWidgets('search narrows the roster', (WidgetTester tester) async {

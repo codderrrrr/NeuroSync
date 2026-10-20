@@ -164,15 +164,117 @@ class _ExerciseList extends StatelessWidget {
     }
 
     final List<Assignment> items = controller.assignments;
-    return ListView.separated(
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (BuildContext context, int index) => _ExerciseRow(
-        assignment: items[index],
-        controller: controller,
-        onEdit: () => onEdit(items[index]),
-        onRemove: () => onRemove(items[index]),
-      ),
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: <Widget>[
+        _CareSummary(items: items),
+        const SizedBox(height: 22),
+        const SectionHeader('Exercises'),
+        const SizedBox(height: 10),
+        for (final Assignment item in items) ...<Widget>[
+          _ExerciseRow(
+            assignment: item,
+            controller: controller,
+            onEdit: () => onEdit(item),
+            onRemove: () => onRemove(item),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+/// What the portal knows about this patient's care, as a set of panels.
+///
+/// Two of these say "not available", and that is the honest answer: the
+/// doctor portal has no access to a patient's monitoring sessions, their
+/// medication, or their longitudinal results, so it cannot show a motor
+/// trend or a medication state. A cell that said "not available" is worth
+/// more than one that guessed.
+class _CareSummary extends StatelessWidget {
+  const _CareSummary({required this.items});
+
+  final List<Assignment> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppColors colors = AppColors.of(context);
+    final int active = items.where((Assignment a) => !a.isRemoved).length;
+    return BentoGrid(
+      columns: 2,
+      spacing: 12,
+      runSpacing: 12,
+      cells: <Widget>[
+        BentoCell(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const BentoLabel('Exercises'),
+              const SizedBox(height: 8),
+              BentoStat(
+                value: '$active',
+                valueSize: 24,
+                caption:
+                    active == 1 ? 'exercise assigned' : 'exercises assigned',
+              ),
+            ],
+          ),
+        ),
+        BentoCell(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const BentoLabel('30-day motor trend'),
+              const SizedBox(height: 8),
+              BentoStat(
+                value: 'Not available',
+                valueSize: 18,
+                valueColor: colors.secondaryLabel,
+                caption: 'not visible here',
+              ),
+            ],
+          ),
+        ),
+        BentoCell(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const BentoLabel('Medication'),
+              const SizedBox(height: 8),
+              BentoStat(
+                value: 'Not available',
+                valueSize: 18,
+                valueColor: colors.secondaryLabel,
+                caption: 'not visible here',
+              ),
+            ],
+          ),
+        ),
+        BentoCell(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const BentoLabel('Quality flags'),
+              const SizedBox(height: 8),
+              BentoStat(
+                value: 'Not available',
+                valueSize: 18,
+                valueColor: colors.secondaryLabel,
+                caption: 'not visible here',
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
