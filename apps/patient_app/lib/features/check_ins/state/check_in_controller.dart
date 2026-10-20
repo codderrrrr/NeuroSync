@@ -5,38 +5,22 @@ import '../data/check_in_repository.dart';
 import '../models/check_in.dart';
 
 /// Loads and creates the signed-in patient's symptom check-ins.
-class CheckInController extends ChangeNotifier {
+class CheckInController extends ChangeNotifier with ApiStateController {
   CheckInController({required CheckInRepository repository})
       : _repository = repository;
 
   final CheckInRepository _repository;
 
   List<CheckIn> _checkIns = const <CheckIn>[];
-  bool _isLoading = false;
-  bool _isSubmitting = false;
   bool _hasLoaded = false;
-  String? _errorMessage;
 
   List<CheckIn> get checkIns => _checkIns;
-  bool get isLoading => _isLoading;
-  bool get isSubmitting => _isSubmitting;
   bool get hasLoaded => _hasLoaded;
-  String? get errorMessage => _errorMessage;
 
-  Future<void> load() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      _checkIns = await _repository.listCheckIns();
-      _hasLoaded = true;
-    } on ApiException catch (error) {
-      _errorMessage = error.message;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
+  Future<void> load() => runLoad(() async {
+        _checkIns = await _repository.listCheckIns();
+        _hasLoaded = true;
+      });
 
   /// Records a check-in and prepends the check-in the server returned.
   ///
@@ -48,33 +32,22 @@ class CheckInController extends ChangeNotifier {
     required int slowness,
     required int balance,
     String? note,
-  }) async {
-    _isSubmitting = true;
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      final CheckIn checkIn = await _repository.createCheckIn(
-        tremor: tremor,
-        stiffness: stiffness,
-        slowness: slowness,
-        balance: balance,
-        note: note,
-      );
-      _checkIns = <CheckIn>[checkIn, ..._checkIns];
-      _hasLoaded = true;
-      return true;
-    } on ApiException catch (error) {
-      _errorMessage = error.message;
-      return false;
-    } finally {
-      _isSubmitting = false;
-      notifyListeners();
-    }
-  }
+  }) =>
+      runSubmit(() async {
+        final CheckIn checkIn = await _repository.createCheckIn(
+          tremor: tremor,
+          stiffness: stiffness,
+          slowness: slowness,
+          balance: balance,
+          note: note,
+        );
+        _checkIns = <CheckIn>[checkIn, ..._checkIns];
+        _hasLoaded = true;
+      });
 
   void clear() {
     _checkIns = const <CheckIn>[];
     _hasLoaded = false;
-    _errorMessage = null;
+    clearError();
   }
 }

@@ -16,6 +16,7 @@ export 'auth/auth_controller.dart' show AuthStatus;
 export 'network/api_client.dart';
 export 'network/api_exception.dart';
 export 'scope/app_scope_base.dart';
+export 'state/api_state_controller.dart';
 export 'storage/session_token_store.dart';
 export 'theme/app_theme.dart';
 export 'theme/intro_scale.dart';

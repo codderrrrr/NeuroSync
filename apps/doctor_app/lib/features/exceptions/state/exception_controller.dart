@@ -9,7 +9,7 @@ import '../models/review_exception.dart';
 /// Holds both the queue and any detail opened from it, because a review changes
 /// the row the queue is showing: closing an exception must move it out of the
 /// open filter without a second round trip to discover that.
-class ExceptionController extends ChangeNotifier {
+class ExceptionController extends ChangeNotifier with ApiStateController {
   ExceptionController({required ExceptionRepository repository})
       : _repository = repository;
 
@@ -20,18 +20,14 @@ class ExceptionController extends ChangeNotifier {
       <int, ReviewExceptionDetail>{};
   final Set<int> _loadingDetails = <int>{};
   ExceptionFilter _filter = ExceptionFilter.all;
-  bool _isLoading = false;
   bool _hasLoaded = false;
   bool _isReviewing = false;
-  String? _errorMessage;
   String? _detailError;
 
   List<ReviewExceptionSummary> get items => _items;
   ExceptionFilter get filter => _filter;
-  bool get isLoading => _isLoading;
   bool get hasLoaded => _hasLoaded;
   bool get isReviewing => _isReviewing;
-  String? get errorMessage => _errorMessage;
 
   /// How many entries are still waiting, across the whole roster.
   int get openCount =>
@@ -47,20 +43,10 @@ class ExceptionController extends ChangeNotifier {
 
   /// Loads the queue. A failure keeps the previous rows visible with the error
   /// surfaced, so a refresh never blanks the page a clinician is reading.
-  Future<void> load() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      _items = await _repository.list(filter: _filter);
-      _hasLoaded = true;
-    } on ApiException catch (error) {
-      _errorMessage = error.message;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
+  Future<void> load() => runLoad(() async {
+        _items = await _repository.list(filter: _filter);
+        _hasLoaded = true;
+      });
 
   /// Switches which slice of the queue is shown, refetching for the new status.
   Future<void> applyFilter(ExceptionFilter filter) async {
