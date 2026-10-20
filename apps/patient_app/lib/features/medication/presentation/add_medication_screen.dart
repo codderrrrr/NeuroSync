@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_text_field.dart';
-import '../../../core/widgets/app_texts.dart';
 import '../state/medication_controller.dart';
 
 /// Records one medication the patient takes.

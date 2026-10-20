@@ -1,12 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:neurosync_doctor/core/network/api_client.dart';
-import 'package:neurosync_doctor/core/storage/session_token_store.dart';
 import 'package:neurosync_doctor/features/auth/data/auth_repository.dart';
-import 'package:neurosync_doctor/features/auth/models/auth_result.dart';
 import 'package:neurosync_doctor/features/auth/models/doctor.dart';
 import 'package:neurosync_doctor/features/auth/state/auth_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../test_support.dart';
 
@@ -230,10 +228,14 @@ void main() {
   });
 
   test('AuthResult parses the token and expiry', () {
-    final AuthResult result = AuthResult.fromJson(authBody());
+    final AuthResult<Doctor> result = AuthResult.fromJson(
+      authBody(),
+      userField: 'doctor',
+      parseUser: Doctor.fromJson,
+    );
 
     expect(result.accessToken, 'test-session-token');
-    expect(result.doctor.name, 'Dr. Amara Osei');
+    expect(result.user.name, 'Dr. Amara Osei');
     expect(result.expiresAt, DateTime.parse('2026-10-07T09:00:00Z'));
   });
 }

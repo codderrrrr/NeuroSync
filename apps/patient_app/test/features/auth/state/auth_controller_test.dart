@@ -4,10 +4,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:neurosync_patient/core/network/api_client.dart';
-import 'package:neurosync_patient/core/storage/session_token_store.dart';
 import 'package:neurosync_patient/features/auth/data/auth_repository.dart';
 import 'package:neurosync_patient/features/auth/state/auth_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 const String _patientJson =
     '{"id": 1, "email": "ada@example.com", "name": "Ada Lovelace", '

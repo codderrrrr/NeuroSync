@@ -3,8 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:neurosync_patient/app.dart';
-import 'package:neurosync_patient/core/network/api_client.dart';
-import 'package:neurosync_patient/core/storage/session_token_store.dart';
 import 'package:neurosync_patient/features/auth/data/auth_repository.dart';
 import 'package:neurosync_patient/features/auth/state/auth_controller.dart';
 import 'package:neurosync_patient/features/check_ins/data/check_in_repository.dart';
@@ -15,6 +13,7 @@ import 'package:neurosync_patient/features/medication/data/medication_repository
 import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
 import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
 import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 const String _patientJson =
     '{"id": 1, "email": "ada@example.com", "name": "Ada Lovelace", '

@@ -3,11 +3,10 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:neurosync_patient/core/network/api_client.dart';
-import 'package:neurosync_patient/core/storage/session_token_store.dart';
 import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
 import 'package:neurosync_patient/features/monitoring/models/session_result.dart';
 import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 /// The JSON the API returns for the seeded default plan.
 Map<String, dynamic> planJson({bool supported = true}) {

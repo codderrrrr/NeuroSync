@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:neurosync_patient/core/widgets/tactile_button.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 Widget wrap({required Widget child, bool reduceMotion = false}) {
   return MaterialApp(

@@ -1,10 +1,12 @@
+import 'package:neurosync_core/neurosync_core.dart';
+
 /// Basic patient profile returned by the API.
-class Patient {
+class Patient extends AuthUser {
   const Patient({
-    required this.id,
-    required this.email,
-    required this.name,
-    required this.createdAt,
+    required super.id,
+    required super.email,
+    required super.name,
+    required super.createdAt,
   });
 
   factory Patient.fromJson(Map<String, dynamic> json) {
@@ -14,17 +16,5 @@ class Patient {
       name: json['name'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
-  }
-
-  final int id;
-  final String email;
-  final String name;
-  final DateTime createdAt;
-
-  /// First word of the patient's name, used for the home greeting.
-  String get firstName {
-    final String trimmed = name.trim();
-    final int separator = trimmed.indexOf(' ');
-    return separator == -1 ? trimmed : trimmed.substring(0, separator);
   }
 }

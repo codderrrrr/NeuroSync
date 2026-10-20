@@ -32,3 +32,8 @@ apps/doctor_app/web/
 # Local tool artifacts
 .VSCodeCounter/
 .opencode/
+
+# Flutter build and tool artifacts
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies

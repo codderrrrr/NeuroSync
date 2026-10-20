@@ -3,11 +3,10 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:neurosync_doctor/core/network/api_client.dart';
-import 'package:neurosync_doctor/core/storage/session_token_store.dart';
 import 'package:neurosync_doctor/features/patients/data/assignment_repository.dart';
 import 'package:neurosync_doctor/features/patients/models/assessment_option.dart';
 import 'package:neurosync_doctor/features/patients/state/assignment_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../test_support.dart';
 

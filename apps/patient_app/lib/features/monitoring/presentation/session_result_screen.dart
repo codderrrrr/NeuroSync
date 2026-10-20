@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../core/formatting/date_format.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_buttons.dart';
-import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/app_texts.dart';
 import '../../medication/models/medication_context.dart';
 import '../models/longitudinal_summary.dart';
 import '../models/session_result.dart';

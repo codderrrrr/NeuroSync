@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import 'features/auth/state/auth_controller.dart';
 import 'features/check_ins/state/check_in_controller.dart';
@@ -11,7 +12,7 @@ import 'features/monitoring/state/monitoring_controller.dart';
 /// A plain [InheritedWidget] is enough here: widgets listen to the controllers
 /// they care about with [ListenableBuilder], so rebuilds stay scoped to the
 /// parts of the screen that actually change.
-class AppScope extends InheritedWidget {
+class AppScope extends AppScopeBase {
   const AppScope({
     super.key,
     required this.auth,
@@ -34,7 +35,4 @@ class AppScope extends InheritedWidget {
     assert(scope != null, 'AppScope is missing from the widget tree.');
     return scope!;
   }
-
-  @override
-  bool updateShouldNotify(AppScope oldWidget) => false;
 }

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../app_scope.dart';
-import '../../../core/widgets/app_buttons.dart';
-import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_text_field.dart';
-import '../../../core/widgets/app_texts.dart';
 import '../state/check_in_controller.dart';
 
 /// Records one symptom check-in: four severity ratings and an optional note.

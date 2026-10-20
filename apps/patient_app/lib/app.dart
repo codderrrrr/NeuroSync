@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 import 'package:flutter/services.dart';
 
 import 'app_scope.dart';
-import 'core/theme/app_theme.dart';
 import 'features/auth/state/auth_controller.dart';
 import 'features/check_ins/state/check_in_controller.dart';
 import 'features/doctor_links/state/doctor_link_controller.dart';

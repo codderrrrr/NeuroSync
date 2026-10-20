@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
+import 'package:neurosync_core/widgets/splash_screen.dart';
 import 'package:flutter/services.dart';
 
 import 'app/portal_shell.dart';
 import 'app_scope.dart';
-import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/state/auth_controller.dart';
 import 'features/exceptions/state/exception_controller.dart';
@@ -73,42 +74,11 @@ class _RootView extends StatelessWidget {
               onSignOut: () => AppScope.of(context).auth.signOut(),
             );
           case AuthStatus.checking:
-            return const _SplashScreen();
+            return const SplashScreen();
           case AuthStatus.signedOut:
             return const LoginScreen();
         }
       },
-    );
-  }
-}
-
-class _SplashScreen extends StatelessWidget {
-  const _SplashScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              'NeuroSync',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const SizedBox(
-              height: 24,
-              width: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

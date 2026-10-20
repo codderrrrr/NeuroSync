@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../../core/theme/intro_scale.dart';
-import '../../core/widgets/app_buttons.dart';
 import 'visuals/movement_mark.dart';
 
 /// The calm conclusion of onboarding: two ways into authentication.

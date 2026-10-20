@@ -5,9 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:neurosync_doctor/app_scope.dart';
-import 'package:neurosync_doctor/core/network/api_client.dart';
-import 'package:neurosync_doctor/core/storage/session_token_store.dart';
-import 'package:neurosync_doctor/core/theme/app_theme.dart';
 import 'package:neurosync_doctor/features/auth/data/auth_repository.dart';
 import 'package:neurosync_doctor/features/auth/state/auth_controller.dart';
 import 'package:neurosync_doctor/features/exceptions/data/exception_repository.dart';
@@ -16,6 +13,7 @@ import 'package:neurosync_doctor/features/patients/data/assignment_repository.da
 import 'package:neurosync_doctor/features/patients/state/assignment_controller.dart';
 import 'package:neurosync_doctor/features/roster/data/roster_repository.dart';
 import 'package:neurosync_doctor/features/roster/state/roster_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 /// A code-shaped fixture value matching the backend's unambiguous alphabet.
 const String kDoctorCode = 'K7M2XQ9';

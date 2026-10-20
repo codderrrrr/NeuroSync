@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../core/formatting/date_format.dart';
-import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/app_texts.dart';
 import '../models/doctor_link.dart';
 import '../state/doctor_link_controller.dart';
 import 'status_chip.dart';

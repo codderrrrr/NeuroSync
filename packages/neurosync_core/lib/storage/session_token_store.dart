@@ -11,23 +11,28 @@ abstract class SessionTokenStore {
 
 /// Stores the session token in the platform secure storage
 /// (iOS Keychain / Android Keystore).
+///
+/// The storage key is the caller's, so the two applications keep their tokens
+/// apart: a doctor signing in on a shared device must not find a patient's
+/// session already there.
 class SecureSessionTokenStore implements SessionTokenStore {
-  SecureSessionTokenStore({FlutterSecureStorage? storage})
+  SecureSessionTokenStore({required this.storageKey, FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage();
 
-  static const String _tokenKey = 'neurosync.session_token';
+  /// The key the token is stored under.
+  final String storageKey;
 
   final FlutterSecureStorage _storage;
 
   @override
-  Future<String?> read() => _storage.read(key: _tokenKey);
+  Future<String?> read() => _storage.read(key: storageKey);
 
   @override
   Future<void> write(String token) =>
-      _storage.write(key: _tokenKey, value: token);
+      _storage.write(key: storageKey, value: token);
 
   @override
-  Future<void> clear() => _storage.delete(key: _tokenKey);
+  Future<void> clear() => _storage.delete(key: storageKey);
 }
 
 /// In-memory store used by tests and local previews.

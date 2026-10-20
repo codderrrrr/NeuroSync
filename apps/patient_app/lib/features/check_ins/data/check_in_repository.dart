@@ -1,4 +1,4 @@
-import '../../../core/network/api_client.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 import '../models/check_in.dart';
 
 /// Check-in endpoints for the signed-in patient.

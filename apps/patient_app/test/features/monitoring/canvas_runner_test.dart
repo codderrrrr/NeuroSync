@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:neurosync_patient/core/network/api_client.dart';
-import 'package:neurosync_patient/core/storage/session_token_store.dart';
-import 'package:neurosync_patient/core/theme/app_theme.dart';
 import 'package:neurosync_patient/features/monitoring/canvas/canvas_ink.dart';
 import 'package:neurosync_patient/features/monitoring/canvas/canvas_runner_screen.dart';
 import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
@@ -14,6 +11,7 @@ import 'package:neurosync_patient/features/monitoring/models/monitoring_plan.dar
 import 'package:neurosync_patient/features/monitoring/models/monitoring_session.dart';
 import 'package:neurosync_patient/features/monitoring/models/session_result.dart';
 import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 Map<String, dynamic> settingJson(
   String key,

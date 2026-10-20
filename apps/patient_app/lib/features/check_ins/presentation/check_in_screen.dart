@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../app_scope.dart';
 import '../../../core/formatting/date_format.dart';
-import '../../../core/widgets/app_buttons.dart';
-import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/app_texts.dart';
 import '../../monitoring/presentation/monitoring_history_section.dart';
 import '../models/check_in.dart';
 import '../state/check_in_controller.dart';

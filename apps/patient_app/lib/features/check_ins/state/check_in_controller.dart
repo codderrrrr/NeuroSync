@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../../../core/network/api_exception.dart';
 import '../data/check_in_repository.dart';
 import '../models/check_in.dart';
 

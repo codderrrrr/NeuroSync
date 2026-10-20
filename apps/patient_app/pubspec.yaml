@@ -14,6 +14,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.2.2
   flutter_secure_storage: ^9.2.2
+  # The design system, networking, session handling and sign-in lifecycle
+  # shared with the other application.
+  neurosync_core:
+    path: ../../packages/neurosync_core
 
 dev_dependencies:
   flutter_test:

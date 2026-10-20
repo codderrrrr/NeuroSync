@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 import 'package:http/http.dart' as http;
 
 import 'app.dart';
 import 'core/config/app_config.dart';
-import 'core/network/api_client.dart';
-import 'core/storage/session_token_store.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/state/auth_controller.dart';
 import 'features/check_ins/data/check_in_repository.dart';
@@ -22,7 +21,8 @@ void main() {
   // One in-memory token cache shared by the API client and the auth controller,
   // so requests never wait on secure storage.
   final SessionTokenCache tokenCache = SessionTokenCache();
-  final SessionTokenStore tokenStore = SecureSessionTokenStore();
+  final SessionTokenStore tokenStore =
+      SecureSessionTokenStore(storageKey: 'neurosync.session_token');
   final http.Client httpClient = http.Client();
 
   final ApiClient apiClient = ApiClient(

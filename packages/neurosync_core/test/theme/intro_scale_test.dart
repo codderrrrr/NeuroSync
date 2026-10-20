@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:neurosync_patient/core/theme/intro_scale.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 /// Wraps a child in the media conditions [IntroScale] reads, without changing
 /// the test surface: the scale is derived from the reported viewport.

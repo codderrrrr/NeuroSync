@@ -1,9 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../../core/theme/intro_scale.dart';
-import '../../core/widgets/app_buttons.dart';
 import 'onboarding_data.dart';
 import 'visuals/baseline_signal.dart';
 

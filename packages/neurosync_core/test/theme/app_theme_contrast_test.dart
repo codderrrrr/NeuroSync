@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:neurosync_patient/core/theme/app_theme.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 /// WCAG 2.1 relative luminance of a colour.
 double _luminance(Color color) {

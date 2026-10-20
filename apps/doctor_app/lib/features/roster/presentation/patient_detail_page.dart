@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../app/portal_widgets.dart';
 import '../../../app_scope.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_buttons.dart';
 import '../../patients/models/assignment.dart';
 import '../../patients/presentation/assignment_page.dart';
 import '../../patients/state/assignment_controller.dart';

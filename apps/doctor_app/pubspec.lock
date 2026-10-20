@@ -280,6 +280,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.18.3"
+  neurosync_core:
+    dependency: "direct main"
+    description:
+      path: "../../packages/neurosync_core"
+      relative: true
+    source: path
+    version: "0.1.0+1"
   objective_c:
     dependency: transitive
     description:

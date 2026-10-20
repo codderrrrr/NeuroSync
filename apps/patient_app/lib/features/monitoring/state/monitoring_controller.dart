@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../../../core/network/api_exception.dart';
 import '../data/monitoring_repository.dart';
 import '../models/canvas_event.dart';
 import '../models/monitoring_plan.dart';

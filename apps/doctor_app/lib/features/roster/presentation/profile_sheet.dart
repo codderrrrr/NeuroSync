@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../app_scope.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_buttons.dart';
-import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/app_texts.dart';
 import '../../auth/state/auth_controller.dart';
 
 /// Shows the doctor's identity and, prominently, the personal link code that

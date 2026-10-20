@@ -46,12 +46,12 @@ class ApiClient {
 
   Future<Map<String, dynamic>> postObject(
       String path, Map<String, dynamic> body) async {
-    final response = await _send(() => _post(path, body));
+    final response = await _send(() => _sendWith('POST', path, body));
     return _decodeObject(response);
   }
 
   Future<void> postEmpty(String path) async {
-    final response = await _send(() => _post(path, null));
+    final response = await _send(() => _sendWith('POST', path, null));
     _ensureSuccess(response);
   }
 
@@ -99,9 +99,6 @@ class ApiClient {
           headers: headers, body: body == null ? null : jsonEncode(body)),
     };
   }
-
-  Future<http.Response> _post(String path, Map<String, dynamic>? body) =>
-      _sendWith('POST', path, body);
 
   Future<http.Response> _send(Future<http.Response> Function() request) async {
     try {

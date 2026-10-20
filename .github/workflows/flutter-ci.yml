@@ -21,10 +21,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [patient_app, doctor_app]
+        # The shared package is checked like an app: it has its own source
+        # and its own tests, and a break in it breaks both applications.
+        include:
+          - app: patient_app
+            path: apps/patient_app
+          - app: doctor_app
+            path: apps/doctor_app
+          - app: neurosync_core
+            path: packages/neurosync_core
     defaults:
       run:
-        working-directory: apps/${{ matrix.app }}
+        working-directory: ${{ matrix.path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,10 +63,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [patient_app, doctor_app]
+        include:
+          - app: patient_app
+            path: apps/patient_app
+          - app: doctor_app
+            path: apps/doctor_app
+          - app: neurosync_core
+            path: packages/neurosync_core
     defaults:
       run:
-        working-directory: apps/${{ matrix.app }}
+        working-directory: ${{ matrix.path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -4,13 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:neurosync_patient/core/network/api_client.dart';
-import 'package:neurosync_patient/core/storage/session_token_store.dart';
-import 'package:neurosync_patient/core/theme/app_theme.dart';
-import 'package:neurosync_patient/core/widgets/app_buttons.dart';
 import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
 import 'package:neurosync_patient/features/medication/presentation/medication_context_step_sheet.dart';
 import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 Map<String, dynamic> medicationJson({
   int id = 1,

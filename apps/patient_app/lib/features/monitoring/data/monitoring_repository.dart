@@ -1,4 +1,4 @@
-import '../../../core/network/api_client.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 import '../models/canvas_event.dart';
 import '../models/monitoring_plan.dart';
 import '../models/monitoring_session.dart';

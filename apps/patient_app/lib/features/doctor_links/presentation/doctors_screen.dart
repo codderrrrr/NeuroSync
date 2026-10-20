@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../app_scope.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_buttons.dart';
-import '../../../core/widgets/app_texts.dart';
 import '../state/doctor_link_controller.dart';
 import 'add_doctor_screen.dart';
 import 'doctor_link_list.dart';

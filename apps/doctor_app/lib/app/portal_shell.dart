@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../core/theme/app_theme.dart';
 import '../features/exceptions/presentation/exceptions_view.dart';
 import '../features/roster/presentation/dashboard_view.dart';
 import '../features/roster/presentation/patients_view.dart';

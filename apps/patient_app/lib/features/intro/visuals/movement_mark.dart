@@ -1,8 +1,8 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../../../core/theme/app_theme.dart';
 
 /// Painter for the NeuroSync mark: a single continuous line that rises,
 /// settles and passes through a small loop - movement, continuity and

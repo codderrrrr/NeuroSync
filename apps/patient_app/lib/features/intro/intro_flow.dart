@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../app_scope.dart';
-import '../../core/theme/app_theme.dart';
 import '../auth/presentation/auth_flow.dart';
 import '../auth/presentation/splash_screen.dart';
 import '../auth/state/auth_controller.dart';

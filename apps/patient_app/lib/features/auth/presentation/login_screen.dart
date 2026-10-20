@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../app_scope.dart';
-import '../../../core/theme/intro_scale.dart';
-import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_text_field.dart';
-import '../../../core/widgets/app_texts.dart';
 import '../state/auth_controller.dart';
 
 /// Email and password sign-in.

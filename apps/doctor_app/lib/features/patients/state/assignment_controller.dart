@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../../../core/network/api_exception.dart';
 import '../data/assignment_repository.dart';
 import '../models/assessment_option.dart';
 import '../models/assignment.dart';

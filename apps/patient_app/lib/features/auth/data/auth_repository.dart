@@ -1,41 +1,13 @@
-import '../../../core/network/api_client.dart';
-import '../models/auth_result.dart';
+import 'package:neurosync_core/auth/auth_repository.dart' as core;
+
 import '../models/patient.dart';
 
 /// Patient authentication endpoints.
-class AuthRepository {
-  AuthRepository({required ApiClient apiClient}) : _apiClient = apiClient;
-
-  final ApiClient _apiClient;
-
-  Future<AuthResult> signUp({
-    required String name,
-    required String email,
-    required String password,
-  }) async {
-    final Map<String, dynamic> body =
-        await _apiClient.postObject('/auth/signup', <String, dynamic>{
-      'name': name,
-      'email': email,
-      'password': password,
-    });
-    return AuthResult.fromJson(body);
-  }
-
-  Future<AuthResult> logIn(
-      {required String email, required String password}) async {
-    final Map<String, dynamic> body =
-        await _apiClient.postObject('/auth/login', <String, dynamic>{
-      'email': email,
-      'password': password,
-    });
-    return AuthResult.fromJson(body);
-  }
-
-  Future<Patient> currentPatient() async {
-    final Map<String, dynamic> body = await _apiClient.getObject('/auth/me');
-    return Patient.fromJson(body);
-  }
-
-  Future<void> logOut() => _apiClient.postEmpty('/auth/logout');
+class AuthRepository extends core.AuthRepository<Patient> {
+  AuthRepository({required super.apiClient})
+      : super(
+          basePath: '/auth',
+          userField: 'patient',
+          parseUser: Patient.fromJson,
+        );
 }

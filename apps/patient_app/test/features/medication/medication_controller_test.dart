@@ -3,11 +3,10 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:neurosync_patient/core/network/api_client.dart';
-import 'package:neurosync_patient/core/storage/session_token_store.dart';
 import 'package:neurosync_patient/features/medication/data/medication_repository.dart';
 import 'package:neurosync_patient/features/medication/models/medication.dart';
 import 'package:neurosync_patient/features/medication/state/medication_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 Map<String, dynamic> medicationJson({
   int id = 1,

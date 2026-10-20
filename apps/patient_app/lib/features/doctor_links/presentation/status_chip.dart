@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../models/doctor_link.dart';
 
 /// Capsule that shows the link state with a matching tint.

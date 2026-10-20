@@ -1,0 +1,10 @@
+analyzer:
+  exclude:
+    - build/**
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # The shared package is a library, not an application: a public API
+    # without documentation is a public API nobody can use.
+    public_member_api_docs: false

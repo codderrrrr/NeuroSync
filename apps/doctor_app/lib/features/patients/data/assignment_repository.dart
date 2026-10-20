@@ -1,4 +1,4 @@
-import '../../../core/network/api_client.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 import '../models/assessment_option.dart';
 import '../models/assignment.dart';
 

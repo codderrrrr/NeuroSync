@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:neurosync_patient/core/network/api_client.dart';
-import 'package:neurosync_patient/core/storage/session_token_store.dart';
-import 'package:neurosync_patient/core/theme/app_theme.dart';
 import 'package:neurosync_patient/features/medication/models/medication_context.dart';
 import 'package:neurosync_patient/features/monitoring/data/monitoring_repository.dart';
 import 'package:neurosync_patient/features/monitoring/models/longitudinal_summary.dart';
@@ -15,6 +12,7 @@ import 'package:neurosync_patient/features/monitoring/models/session_result.dart
 import 'package:neurosync_patient/features/monitoring/presentation/monitoring_history_section.dart';
 import 'package:neurosync_patient/features/monitoring/presentation/session_result_screen.dart';
 import 'package:neurosync_patient/features/monitoring/state/monitoring_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 Map<String, dynamic> longitudinalJson({
   String state = 'within_baseline',

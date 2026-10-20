@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_buttons.dart';
-import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/app_texts.dart';
 import '../models/medication.dart';
 import '../state/medication_controller.dart';
 import 'add_medication_screen.dart';

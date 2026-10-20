@@ -3,11 +3,10 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:neurosync_patient/core/network/api_client.dart';
-import 'package:neurosync_patient/core/storage/session_token_store.dart';
 import 'package:neurosync_patient/features/doctor_links/data/doctor_link_repository.dart';
 import 'package:neurosync_patient/features/doctor_links/models/doctor_link.dart';
 import 'package:neurosync_patient/features/doctor_links/state/doctor_link_controller.dart';
+import 'package:neurosync_core/neurosync_core.dart';
 
 DoctorLinkController buildController(MockClient mockClient) {
   return DoctorLinkController(
