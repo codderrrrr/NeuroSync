@@ -18,6 +18,11 @@ from neurosync.modules.auth.security import (
     hash_session_token,
     verify_password,
 )
+from neurosync.modules.auth.session_support import (
+    issue_session_token,
+    resolve_owner_for_session,
+    revoke_session_token,
+)
 
 # Verifying against this hash when no account exists keeps response time similar
 # for known and unknown emails, which resists account enumeration.
@@ -56,18 +61,14 @@ def normalize_email(email: str) -> str:
 async def _issue_session(session: AsyncSession, patient_id: int) -> tuple[str, datetime]:
     """Persist a new session, returning its raw token and expiry."""
     token = generate_session_token()
-    now = _now()
-    expires_at = now + SESSION_TTL
-    session.add(
-        PatientSession(
-            patient_id=patient_id,
-            token_hash=hash_session_token(token),
-            expires_at=expires_at,
-            created_at=now,
-        )
+    return await issue_session_token(
+        session,
+        session_model=PatientSession,
+        owner_id_column="patient_id",
+        owner_id=patient_id,
+        token=token,
+        ttl=SESSION_TTL,
     )
-    await session.flush()
-    return token, expires_at
 
 
 async def signup_patient(
@@ -133,33 +134,22 @@ async def resolve_patient_for_session(session: AsyncSession, *, token: str) -> P
     only succeeds while the session is unrevoked, unexpired and the account is
     active.
     """
-    statement = (
-        select(Patient)
-        .join(PatientSession, PatientSession.patient_id == Patient.id)
-        .where(
-            PatientSession.token_hash == hash_session_token(token),
-            PatientSession.revoked_at.is_(None),
-            PatientSession.expires_at > _now(),
-            Patient.is_active.is_(True),
+    try:
+        return await resolve_owner_for_session(
+            session,
+            token_hash=hash_session_token(token),
+            owner_model=Patient,
+            session_model=PatientSession,
+            owner_id_column=PatientSession.patient_id,
         )
-        .limit(1)
-    )
-    patient = await session.scalar(statement)
-    if patient is None:
-        raise InvalidSessionError
-    return patient
+    except LookupError as exc:
+        raise InvalidSessionError from exc
 
 
 async def revoke_session(session: AsyncSession, *, token: str) -> None:
     """Revoke a session. Unknown or already-revoked tokens are ignored."""
-    patient_session = await session.scalar(
-        select(PatientSession).where(
-            PatientSession.token_hash == hash_session_token(token),
-            PatientSession.revoked_at.is_(None),
-        )
+    await revoke_session_token(
+        session,
+        token_hash=hash_session_token(token),
+        session_model=PatientSession,
     )
-    if patient_session is None:
-        return
-
-    patient_session.revoked_at = _now()
-    await session.commit()

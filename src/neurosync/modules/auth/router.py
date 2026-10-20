@@ -23,6 +23,7 @@ from neurosync.modules.auth.service import (
     revoke_session,
     signup_patient,
 )
+from neurosync.modules.auth.session_support import delete_session_cookie, set_session_cookie
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -43,18 +44,6 @@ def _auth_response(patient: Patient, token: str, expires_at: datetime) -> AuthRe
         patient=_patient_response(patient),
         access_token=token,
         expires_at=expires_at,
-    )
-
-
-def _set_session_cookie(response: Response, *, token: str, expires_at: datetime) -> None:
-    response.set_cookie(
-        key=SESSION_COOKIE_NAME,
-        value=token,
-        httponly=True,
-        secure=settings.is_production,
-        samesite="lax",
-        path="/",
-        expires=expires_at,
     )
 
 
@@ -83,7 +72,13 @@ async def signup(
             detail="An account with this email already exists.",
         ) from exc
 
-    _set_session_cookie(response, token=token, expires_at=expires_at)
+    set_session_cookie(
+        response,
+        cookie_name=SESSION_COOKIE_NAME,
+        token=token,
+        expires_at=expires_at,
+        secure=settings.is_production,
+    )
     return _auth_response(patient, token, expires_at)
 
 
@@ -116,7 +111,13 @@ async def login(
             detail="This account is inactive.",
         ) from exc
 
-    _set_session_cookie(response, token=token, expires_at=expires_at)
+    set_session_cookie(
+        response,
+        cookie_name=SESSION_COOKIE_NAME,
+        token=token,
+        expires_at=expires_at,
+        secure=settings.is_production,
+    )
     return _auth_response(patient, token, expires_at)
 
 
@@ -132,7 +133,7 @@ async def logout(
     token: Annotated[str, Depends(get_session_token)],
 ) -> None:
     await revoke_session(session, token=token)
-    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/", samesite="lax")
+    delete_session_cookie(response, cookie_name=SESSION_COOKIE_NAME)
 
 
 @router.get(

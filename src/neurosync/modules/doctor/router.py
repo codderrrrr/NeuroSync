@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from neurosync.config.settings import settings
 from neurosync.db import get_session
 from neurosync.db.models import Doctor
+from neurosync.modules.auth.session_support import delete_session_cookie, set_session_cookie
 from neurosync.modules.doctor.dependencies import (
     DOCTOR_SESSION_COOKIE_NAME,
     get_current_doctor,
@@ -96,18 +97,6 @@ async def _auth_response(
     )
 
 
-def _set_session_cookie(response: Response, *, token: str, expires_at: datetime) -> None:
-    response.set_cookie(
-        key=DOCTOR_SESSION_COOKIE_NAME,
-        value=token,
-        httponly=True,
-        secure=settings.is_production,
-        samesite="lax",
-        path="/",
-        expires=expires_at,
-    )
-
-
 @router.post(
     "/auth/signup",
     response_model=DoctorAuthResponse,
@@ -142,7 +131,13 @@ async def signup(
             detail="A doctor with this name already exists.",
         ) from exc
 
-    _set_session_cookie(response, token=token, expires_at=expires_at)
+    set_session_cookie(
+        response,
+        cookie_name=DOCTOR_SESSION_COOKIE_NAME,
+        token=token,
+        expires_at=expires_at,
+        secure=settings.is_production,
+    )
     return await _auth_response(session, doctor, token, expires_at)
 
 
@@ -175,7 +170,13 @@ async def login(
             detail="This account is inactive.",
         ) from exc
 
-    _set_session_cookie(response, token=token, expires_at=expires_at)
+    set_session_cookie(
+        response,
+        cookie_name=DOCTOR_SESSION_COOKIE_NAME,
+        token=token,
+        expires_at=expires_at,
+        secure=settings.is_production,
+    )
     return await _auth_response(session, doctor, token, expires_at)
 
 
@@ -191,7 +192,7 @@ async def logout(
     token: Annotated[str, Depends(get_doctor_session_token)],
 ) -> None:
     await revoke_doctor_session(session, token=token)
-    response.delete_cookie(key=DOCTOR_SESSION_COOKIE_NAME, path="/", samesite="lax")
+    delete_session_cookie(response, cookie_name=DOCTOR_SESSION_COOKIE_NAME)
 
 
 @router.get(

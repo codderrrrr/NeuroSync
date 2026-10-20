@@ -23,6 +23,11 @@ from neurosync.modules.auth.security import (
     hash_session_token,
     verify_password,
 )
+from neurosync.modules.auth.session_support import (
+    issue_session_token,
+    resolve_owner_for_session,
+    revoke_session_token,
+)
 from neurosync.modules.doctor.models import DoctorSession
 from neurosync.modules.doctor.schemas import validated_assignment_parameters
 from neurosync.modules.doctor_linking.models import DoctorCode, DoctorLink, DoctorLinkStatus
@@ -105,18 +110,14 @@ def generate_doctor_code() -> str:
 async def _issue_session(session: AsyncSession, doctor_id: int) -> tuple[str, datetime]:
     """Persist a new doctor session, returning its raw token and expiry."""
     token = generate_session_token()
-    now = _now()
-    expires_at = now + DOCTOR_SESSION_TTL
-    session.add(
-        DoctorSession(
-            doctor_id=doctor_id,
-            token_hash=hash_session_token(token),
-            expires_at=expires_at,
-            created_at=now,
-        )
+    return await issue_session_token(
+        session,
+        session_model=DoctorSession,
+        owner_id_column="doctor_id",
+        owner_id=doctor_id,
+        token=token,
+        ttl=DOCTOR_SESSION_TTL,
     )
-    await session.flush()
-    return token, expires_at
 
 
 async def _issue_doctor_code(session: AsyncSession, doctor_id: int) -> str:
@@ -219,36 +220,25 @@ async def resolve_doctor_for_session(session: AsyncSession, *, token: str) -> Do
     only succeeds while the session is unrevoked, unexpired and the account is
     active.
     """
-    statement = (
-        select(Doctor)
-        .join(DoctorSession, DoctorSession.doctor_id == Doctor.id)
-        .where(
-            DoctorSession.token_hash == hash_session_token(token),
-            DoctorSession.revoked_at.is_(None),
-            DoctorSession.expires_at > _now(),
-            Doctor.is_active.is_(True),
+    try:
+        return await resolve_owner_for_session(
+            session,
+            token_hash=hash_session_token(token),
+            owner_model=Doctor,
+            session_model=DoctorSession,
+            owner_id_column=DoctorSession.doctor_id,
         )
-        .limit(1)
-    )
-    doctor = await session.scalar(statement)
-    if doctor is None:
-        raise InvalidDoctorSessionError
-    return doctor
+    except LookupError as exc:
+        raise InvalidDoctorSessionError from exc
 
 
 async def revoke_doctor_session(session: AsyncSession, *, token: str) -> None:
     """Revoke a doctor session. Unknown or already-revoked tokens are ignored."""
-    doctor_session = await session.scalar(
-        select(DoctorSession).where(
-            DoctorSession.token_hash == hash_session_token(token),
-            DoctorSession.revoked_at.is_(None),
-        )
+    await revoke_session_token(
+        session,
+        token_hash=hash_session_token(token),
+        session_model=DoctorSession,
     )
-    if doctor_session is None:
-        return
-
-    doctor_session.revoked_at = _now()
-    await session.commit()
 
 
 @dataclass(frozen=True, slots=True)

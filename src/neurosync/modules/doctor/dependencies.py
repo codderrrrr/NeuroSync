@@ -2,26 +2,21 @@
 
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, Request, status
+from fastapi import Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neurosync.db import get_session
 from neurosync.db.models import Doctor
+from neurosync.modules.auth.session_support import (
+    ERR_DOCTOR_AUTH_REQUIRED,
+    extract_session_token,
+    unauthorized,
+)
 from neurosync.modules.doctor.service import InvalidDoctorSessionError, resolve_doctor_for_session
-
-_BEARER_SCHEME = "bearer"
 
 # Separate from the patient cookie so the two apps can run side by side in one
 # browser without their sessions colliding.
 DOCTOR_SESSION_COOKIE_NAME = "neurosync_doctor_session"
-
-
-def _unauthorized() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Doctor authentication required.",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
 
 
 async def get_doctor_session_token(
@@ -34,16 +29,7 @@ async def get_doctor_session_token(
     HTTP-only cookie so browser refreshes keep the session without exposing
     it to scripts.
     """
-    if authorization:
-        scheme, _, credentials = authorization.partition(" ")
-        if scheme.lower() == _BEARER_SCHEME and credentials:
-            return credentials
-
-    cookie_token = request.cookies.get(DOCTOR_SESSION_COOKIE_NAME)
-    if cookie_token:
-        return cookie_token
-
-    raise _unauthorized()
+    return extract_session_token(request, authorization, cookie_name=DOCTOR_SESSION_COOKIE_NAME)
 
 
 async def get_current_doctor(
@@ -59,4 +45,4 @@ async def get_current_doctor(
     try:
         return await resolve_doctor_for_session(session, token=token)
     except InvalidDoctorSessionError as exc:
-        raise _unauthorized() from exc
+        raise unauthorized(ERR_DOCTOR_AUTH_REQUIRED) from exc

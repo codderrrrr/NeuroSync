@@ -1,22 +1,17 @@
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, Request, status
+from fastapi import Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neurosync.db import get_session
 from neurosync.modules.auth.models import Patient
 from neurosync.modules.auth.security import SESSION_COOKIE_NAME
 from neurosync.modules.auth.service import InvalidSessionError, resolve_patient_for_session
-
-_BEARER_SCHEME = "bearer"
-
-
-def _unauthorized() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Authentication required.",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+from neurosync.modules.auth.session_support import (
+    ERR_AUTH_REQUIRED,
+    extract_session_token,
+    unauthorized,
+)
 
 
 async def get_session_token(
@@ -28,16 +23,7 @@ async def get_session_token(
     The patient application sends a bearer token. The same token is also set as
     an HTTP-only cookie so browser clients work without exposing it to scripts.
     """
-    if authorization:
-        scheme, _, credentials = authorization.partition(" ")
-        if scheme.lower() == _BEARER_SCHEME and credentials:
-            return credentials
-
-    cookie_token = request.cookies.get(SESSION_COOKIE_NAME)
-    if cookie_token:
-        return cookie_token
-
-    raise _unauthorized()
+    return extract_session_token(request, authorization, cookie_name=SESSION_COOKIE_NAME)
 
 
 async def get_current_patient(
@@ -52,4 +38,4 @@ async def get_current_patient(
     try:
         return await resolve_patient_for_session(session, token=token)
     except InvalidSessionError as exc:
-        raise _unauthorized() from exc
+        raise unauthorized(ERR_AUTH_REQUIRED) from exc
