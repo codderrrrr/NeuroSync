@@ -135,10 +135,6 @@ class MonitoringController extends ChangeNotifier {
   MonitoringSession? _lastCompletedSession;
   MonitoringSession? get lastCompletedSession => _lastCompletedSession;
 
-  void clearLastCompletedSession() {
-    _lastCompletedSession = null;
-  }
-
   /// Drops in-progress session state without telling the server; used when the
   /// patient leaves the runner before finishing.
   void abandonSession() {

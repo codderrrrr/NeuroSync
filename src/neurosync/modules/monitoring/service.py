@@ -148,8 +148,7 @@ ERR_NON_TAP_RECORDING = "Only finger-tapping recordings take part in longitudina
 ERR_MISSING_CANVAS_COORDS = "Canvas events must carry numeric 'x' and 'y' values."
 ERR_UNKNOWN_EXECUTION_TYPE = "No runner is implemented for execution type {type}."
 ERR_MEDICATION_CONTEXT_NOT_SUPPORTED = (
-    "Medication context is recorded for assessments that have a "
-    "longitudinal comparison."
+    "Medication context is recorded for assessments that have a longitudinal comparison."
 )
 
 

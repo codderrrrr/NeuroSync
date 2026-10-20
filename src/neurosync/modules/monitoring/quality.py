@@ -5,54 +5,15 @@ long, or irregular. It never carries clinical meaning and must never be shown
 to patients or doctors as one.
 """
 
-from dataclasses import dataclass
-
 from neurosync.modules.monitoring.canvas_features import CanvasFeatures
 from neurosync.modules.monitoring.features import TapFeatures
 from neurosync.modules.monitoring.models import RecordingQuality
-
-
-@dataclass(frozen=True, slots=True)
-class QualityRule:
-    """One human-readable quality threshold, kept next to its code."""
-
-    code: str
-    explanation: str
-
 
 MIN_TAPS_FOR_RHYTHM = 10
 MIN_TAPS_FOR_INTERVAL = 2
 MIN_DURATION_FRACTION = 0.5
 MAX_DURATION_FRACTION = 2.0
 LONG_PAUSE_MS = 5_000
-
-# Ordered rules; the first failing rule decides the quality state.
-RULES: tuple[QualityRule, ...] = (
-    QualityRule(
-        code="too_few_taps",
-        explanation=f"Fewer than {MIN_TAPS_FOR_RHYTHM} taps were recorded.",
-    ),
-    QualityRule(
-        code="too_short",
-        explanation=(
-            f"The recording is shorter than {MIN_DURATION_FRACTION:.0%} of the "
-            "expected task duration."
-        ),
-    ),
-    QualityRule(
-        code="too_long",
-        explanation=(
-            f"The recording runs past {MAX_DURATION_FRACTION:.0%} of the "
-            "expected task duration, which suggests the task was left running."
-        ),
-    ),
-    QualityRule(
-        code="long_pause",
-        explanation=(
-            f"A pause longer than {LONG_PAUSE_MS / 1000:.0f} seconds interrupts the tapping rhythm."
-        ),
-    ),
-)
 
 
 def evaluate_quality(
@@ -89,37 +50,6 @@ def evaluate_quality(
 # Below this a "recording" is a smudge rather than a trace, whatever the
 # duration says.
 MIN_CANVAS_POINTS = 12
-
-CANVAS_RULES: tuple[QualityRule, ...] = (
-    QualityRule(
-        code="too_few_points",
-        explanation=f"Fewer than {MIN_CANVAS_POINTS} points were recorded.",
-    ),
-    QualityRule(
-        code="too_short",
-        explanation=(
-            f"The recording is shorter than {MIN_DURATION_FRACTION:.0%} of the "
-            "expected task duration."
-        ),
-    ),
-    QualityRule(
-        code="too_long",
-        explanation=(
-            f"The recording runs past {MAX_DURATION_FRACTION:.0%} of the "
-            "expected task duration, which suggests the task was left running."
-        ),
-    ),
-    QualityRule(
-        code="too_few_strokes",
-        explanation="Fewer separate movements were recorded than the test asked for.",
-    ),
-    QualityRule(
-        code="long_pause",
-        explanation=(
-            f"The finger stayed down for more than {LONG_PAUSE_MS / 1000:.0f} seconds at a stretch."
-        ),
-    ),
-)
 
 
 def evaluate_canvas_quality(

@@ -63,10 +63,4 @@ class MonitoringRepository {
         .map(MonitoringSession.fromJson)
         .toList(growable: false);
   }
-
-  Future<MonitoringSession> getSession(int sessionId) async {
-    final Map<String, dynamic> body =
-        await _apiClient.getObject('/monitoring/sessions/$sessionId');
-    return MonitoringSession.fromJson(body);
-  }
 }
