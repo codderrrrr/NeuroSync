@@ -16,7 +16,8 @@ abstract class SessionTokenStore {
 /// apart: a doctor signing in on a shared device must not find a patient's
 /// session already there.
 class SecureSessionTokenStore implements SessionTokenStore {
-  SecureSessionTokenStore({required this.storageKey, FlutterSecureStorage? storage})
+  SecureSessionTokenStore(
+      {required this.storageKey, FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage();
 
   /// The key the token is stored under.

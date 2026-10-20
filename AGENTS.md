@@ -93,6 +93,14 @@ uv run python -m neurosync.scripts.seed_doctor_portal
 
 ### Flutter Apps
 ```bash
+# The shared package (design system, networking, sign-in lifecycle)
+cd packages/neurosync_core
+flutter pub get --enforce-lockfile
+flutter analyze
+dart format --output=none --set-exit-if-changed lib test
+flutter test
+
+# The two applications
 cd apps/patient_app || cd apps/doctor_app
 flutter pub get --enforce-lockfile
 flutter analyze
@@ -101,6 +109,13 @@ flutter test
 flutter build bundle --debug         # verify compiles
 flutter build web --release          # doctor_app only (web portal)
 ```
+
+**`packages/neurosync_core` is a path dependency of both apps.** Anything
+shared between them (theme, API client, session store, sign-in controller,
+common widgets, `ApiStateController`) belongs there, not in one app. Each app
+keeps only what is its own: its screens, its endpoints, and its user model.
+Both apps' `pubspec.lock` files must be regenerated and committed when the
+package's dependencies change, or CI's `--enforce-lockfile` fails.
 
 ## Architecture
 
@@ -116,6 +131,7 @@ src/neurosync/
 │   ├── check_ins/         # symptom check-ins
 │   ├── doctor/            # doctor portal auth + patient roster
 │   ├── doctor_linking/    # doctor codes + patient link requests
+│   ├── exceptions/        # specialist review queue
 │   ├── medication/        # medication context for sessions
 │   └── monitoring/        # catalog, plans, sessions, quality, features
 └── scripts/         # dev-only helpers
@@ -126,6 +142,30 @@ Each module typically contains: `models.py`, `schemas.py`, `service.py`, `router
 Tests live in top-level `tests/`:
 - `tests/unit/` — domain logic, pure functions
 - `tests/integration/` — API endpoints, DB interactions
+
+### The monitoring module is split by responsibility
+
+`monitoring/service.py` is a **facade** that re-exports the names below.
+Callers keep importing from it; the implementation lives in focused services:
+
+| Module | Owns |
+|---|---|
+| `monitoring/errors.py` | every domain error and its message |
+| `monitoring/catalog_service.py` | the assessment definitions and their rendering |
+| `monitoring/plan_service.py` | what a patient was asked to do, and for how long |
+| `monitoring/session_service.py` | one execution of one plan item, start to close |
+| `monitoring/longitudinal_service.py` | baselines, observations, what a recording means |
+| `monitoring/longitudinal.py` | the **pure** comparison rules — no I/O, no database |
+
+The dependency order is a DAG: `errors` ← `catalog` ← `plan` ← `session` ←
+`longitudinal`. Never import a service from a service it depends on.
+
+### Patient and doctor sessions share a mechanism, not a boundary
+
+`auth/session_support.py` holds how a session is carried, checked and handed
+back. What stays separate is the boundary: the session tables, the cookie
+names, the lifetimes and the error types. A doctor token must never
+authenticate a patient request, and that is a property of the schema.
 
 ## Database
 
@@ -173,6 +213,12 @@ Poor-quality or insufficient data must not silently generate clinical conclusion
 - `is_supported` is the single guard: checked at assignment, plan listing, session start, edit
 - `ParameterSpec` in `assessment_catalog.py` is the only source of truth for settings keys, bounds, defaults
 - Execution type (`tap` vs `canvas`) decided by catalog `execution_type`, never by client
+
+**Display metadata lives in the catalog too.** `ParameterSpec` carries
+`choice_labels` (how to name a choice value) and `value_format` (how to render
+a number, e.g. `"{value} time(s)"`). The API ships both, and the Flutter apps
+render from them. Never hardcode a label or a format in an app: a label added
+to the catalog would otherwise appear in one app and not the other.
 
 ## Agent Workflow
 

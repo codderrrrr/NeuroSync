@@ -25,7 +25,8 @@ class RosterController extends ChangeNotifier with ApiStateController {
   /// Loads both sections. A failure leaves the previous data visible with the
   /// error surfaced, so a refresh never blanks the dashboard.
   Future<void> loadDashboard() => runLoad(() async {
-        final List<PendingRequest> pending = await _repository.pendingRequests();
+        final List<PendingRequest> pending =
+            await _repository.pendingRequests();
         final List<RosterPatient> patients = await _repository.patients();
         _pending = pending;
         _patients = patients;

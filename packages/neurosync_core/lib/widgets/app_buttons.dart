@@ -38,9 +38,8 @@ class PrimaryButton extends StatelessWidget {
       style: FilledButton.styleFrom(
         elevation: 0,
         shadowColor: Colors.transparent,
-        backgroundColor: enabled
-            ? scheme.primary
-            : scheme.onSurface.withValues(alpha: 0.07),
+        backgroundColor:
+            enabled ? scheme.primary : scheme.onSurface.withValues(alpha: 0.07),
         foregroundColor: enabled ? scheme.onPrimary : scheme.onSurfaceVariant,
         // Pressed stays inside the accent family instead of adding a
         // translucent wash on top of it.
@@ -65,9 +64,7 @@ class PrimaryButton extends StatelessWidget {
     );
     return SizedBox(
       height: AppTheme.controlHeight,
-      child: tactile
-          ? TactileButton(enabled: enabled, child: button)
-          : button,
+      child: tactile ? TactileButton(enabled: enabled, child: button) : button,
     );
   }
 }

@@ -49,10 +49,6 @@ class InvalidSessionError(AuthError):
     """Raised when a session token is absent, revoked, expired or not owned."""
 
 
-def _now() -> datetime:
-    return datetime.now(UTC)
-
-
 def normalize_email(email: str) -> str:
     """Normalise an email address for storage and lookup."""
     return email.strip().lower()
@@ -87,7 +83,7 @@ async def signup_patient(
         raise EmailAlreadyRegisteredError
 
     password_hash = await asyncio.to_thread(hash_password, password)
-    now = _now()
+    now = datetime.now(UTC)
     patient = Patient(
         email=normalized_email,
         password_hash=password_hash,

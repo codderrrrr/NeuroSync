@@ -94,7 +94,8 @@ class AssessmentParameter {
           .cast<String>(),
       maxLength: (json['max_length'] as num?)?.toInt(),
       helpText: json['help_text'] as String? ?? '',
-      choiceLabels: (json['choice_labels'] as Map<String, dynamic>? ?? const <String, dynamic>{})
+      choiceLabels: (json['choice_labels'] as Map<String, dynamic>? ??
+              const <String, dynamic>{})
           .map((k, v) => MapEntry(k, v as String)),
       valueFormat: json['value_format'] as String?,
     );

@@ -86,10 +86,6 @@ class PatientLinkNotFoundError(DoctorLinkError):
 ERR_MISSING_LINKED_PATIENT = "Linked patient {patient_id} is missing."
 
 
-def _now() -> datetime:
-    return datetime.now(UTC)
-
-
 def normalize_doctor_email(email: str) -> str:
     """Normalise an email address for storage and lookup."""
     return email.strip().lower()
@@ -377,7 +373,7 @@ async def accept_patient_link(
         return link, patient_name, False
 
     link.status = DoctorLinkStatus.ACTIVE.value
-    link.accepted_at = _now()
+    link.accepted_at = datetime.now(UTC)
     await session.commit()
 
     # Re-read so the caller sees the persisted state, not the identity map.
@@ -611,7 +607,7 @@ async def update_assignment(  # noqa: PLR0913 - explicit arguments beat a config
         item.duration_seconds = duration_seconds
     if parameters is not None:
         item.parameters = validated_assignment_parameters(definition.slug, parameters)
-    plan.updated_at = _now()
+    plan.updated_at = datetime.now(UTC)
 
     await session.commit()
     return _summary(plan, item, definition)
@@ -646,7 +642,7 @@ async def remove_assignment(
         return
 
     plan.status = PlanStatus.ARCHIVED.value
-    plan.updated_at = _now()
+    plan.updated_at = datetime.now(UTC)
     await session.commit()
 
 

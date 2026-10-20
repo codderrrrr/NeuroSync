@@ -59,7 +59,8 @@ class AuthRepository<TUser extends AuthUser> {
 
   /// Asks the server who we are, to check a stored token is still good.
   Future<TUser> currentUser() async {
-    final Map<String, dynamic> body = await _apiClient.getObject('$basePath/me');
+    final Map<String, dynamic> body =
+        await _apiClient.getObject('$basePath/me');
     return parseUser(body);
   }
 

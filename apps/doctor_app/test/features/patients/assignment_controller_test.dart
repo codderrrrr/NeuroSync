@@ -440,13 +440,15 @@ void main() {
     test('describes a choice using API-provided labels', () {
       final option = AssessmentOption.fromJson(
         assessmentJson(parameters: <Map<String, Object>>[
-          choiceParameter('pacing', 'Speed', 'comfortable',
-              <String>['slow', 'comfortable', 'fast'],
-              choiceLabels: <String, String>{
-                'slow': 'Slow',
-                'comfortable': 'Comfortable',
-                'fast': 'Fast',
-              }),
+          choiceParameter('pacing', 'Speed', 'comfortable', <String>[
+            'slow',
+            'comfortable',
+            'fast'
+          ], choiceLabels: <String, String>{
+            'slow': 'Slow',
+            'comfortable': 'Comfortable',
+            'fast': 'Fast',
+          }),
         ]),
       );
       final param = option.parameters.firstWhere((p) => p.key == 'pacing');
