@@ -36,6 +36,24 @@ enum RecordingQuality {
         return 'Ended early';
     }
   }
+
+  /// A short form for a pill beside other words.
+  ///
+  /// The full phrase needs a line to itself. Beside a title it squeezes the
+  /// title out of the row, and a title cut short is a title the patient
+  /// cannot read.
+  String get shortLabel {
+    switch (this) {
+      case RecordingQuality.valid:
+        return 'STEADY';
+      case RecordingQuality.borderline:
+        return 'UNEVEN';
+      case RecordingQuality.invalid:
+        return 'UNUSABLE';
+      case RecordingQuality.incomplete:
+        return 'EARLY';
+    }
+  }
 }
 
 /// The backend's deterministic summary of one recording.

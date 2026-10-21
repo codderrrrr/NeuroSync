@@ -117,7 +117,7 @@ void main() {
       (http.Request request) async => json(planJson()),
     );
 
-    expect(find.text('Daily motor check-in'), findsOneWidget);
+    expect(find.text('DAILY MOTOR CHECK-IN'), findsOneWidget);
     expect(find.text('Finger Tapping'), findsOneWidget);
     expect(find.text('Begin test'), findsOneWidget);
     expect(find.text('NOT AVAILABLE YET'), findsNothing);

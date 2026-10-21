@@ -5,6 +5,7 @@ import 'package:neurosync_core/neurosync_core.dart';
 import '../../../app_scope.dart';
 import '../../../core/formatting/date_format.dart';
 import '../../../core/widgets/soft_panel.dart';
+import '../../../core/widgets/stat_strip.dart';
 import '../../check_ins/models/check_in.dart';
 import '../../check_ins/presentation/new_check_in_screen.dart';
 import '../../check_ins/state/check_in_controller.dart';
@@ -196,37 +197,26 @@ class _TestSummary extends StatelessWidget {
         )
         .length;
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Expanded(
-            child: StatTile(
-              value: '$thisWeek',
-              caption: 'this week',
-              icon: Icons.calendar_today_outlined,
-              emphasis: true,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: StatTile(
-              value: '$usable',
-              caption: 'usable recordings',
-              icon: Icons.check_circle_outline,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: StatTile(
-              value: '$changed',
-              caption: 'differing from usual',
-              icon: Icons.trending_up,
-              valueColor: changed == 0 ? null : colors.pending,
-            ),
-          ),
-        ],
-      ),
+    return StatStrip(
+      stats: <StatEntry>[
+        StatEntry(
+          value: '$thisWeek',
+          caption: 'this week',
+          icon: Icons.calendar_today_outlined,
+          emphasis: true,
+        ),
+        StatEntry(
+          value: '$usable',
+          caption: 'usable',
+          icon: Icons.check_circle_outline,
+        ),
+        StatEntry(
+          value: '$changed',
+          caption: 'differing',
+          icon: Icons.trending_up,
+          valueColor: changed == 0 ? null : colors.pending,
+        ),
+      ],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../app_scope.dart';
 import '../../../core/widgets/soft_panel.dart';
+import '../../../core/widgets/stat_strip.dart';
 import '../../auth/state/auth_controller.dart';
 import '../../medication/state/medication_controller.dart';
 import '../../monitoring/canvas/canvas_runner_screen.dart';
@@ -226,48 +227,26 @@ class _TodayStats extends StatelessWidget {
     final int todayCount = monitoring.plan?.completedTodayCount ?? 0;
     final int medicines = medications.activeMedications.length;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        // The three tiles read as one row of numbers, so they are the same
-        // height. IntrinsicHeight is what makes that possible in a list,
-        // where the row has no height of its own to divide up.
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Expanded(
-                child: StatTile(
-                  value: doneToday ? 'Done' : 'To do',
-                  caption: doneToday ? "today's test" : "today's test",
-                  icon: doneToday
-                      ? Icons.check_circle_outline
-                      : Icons.radio_button_unchecked,
-                  valueColor: doneToday ? colors.active : colors.label,
-                  emphasis: true,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: StatTile(
-                  value: '$todayCount',
-                  caption:
-                      todayCount == 1 ? 'test done today' : 'tests done today',
-                  icon: Icons.timelapse_outlined,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: StatTile(
-                  value: '$medicines',
-                  caption: medicines == 1
-                      ? 'medicine recorded'
-                      : 'medicines recorded',
-                  icon: Icons.medication_outlined,
-                ),
-              ),
-            ],
-          ),
+    return StatStrip(
+      stats: <StatEntry>[
+        StatEntry(
+          value: doneToday ? 'Done' : 'To do',
+          caption: "today's test",
+          icon: doneToday
+              ? Icons.check_circle_outline
+              : Icons.radio_button_unchecked,
+          valueColor: doneToday ? colors.active : colors.label,
+          emphasis: true,
+        ),
+        StatEntry(
+          value: '$todayCount',
+          caption: todayCount == 1 ? 'test today' : 'tests today',
+          icon: Icons.timelapse_outlined,
+        ),
+        StatEntry(
+          value: '$medicines',
+          caption: medicines == 1 ? 'medicine' : 'medicines',
+          icon: Icons.medication_outlined,
         ),
       ],
     );
@@ -312,9 +291,26 @@ class _RecentRecordings extends StatelessWidget {
       children: <Widget>[
         for (final MonitoringSession session in recent) ...<Widget>[
           SoftPanel(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             child: Row(
               children: <Widget>[
+                // The same mark as the plan card above, so the two read as
+                // one thing rather than as two different kinds of row.
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    _iconFor(session),
+                    size: 16,
+                    color: colors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,9 +341,10 @@ class _RecentRecordings extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 if (session.result != null)
                   StatePill(
-                    label: session.result!.quality.label.toUpperCase(),
+                    label: session.result!.quality.shortLabel,
                     color: _qualityColor(colors, session.result!.quality),
                     tint: _qualityColor(colors, session.result!.quality)
                         .withValues(alpha: 0.14),
@@ -364,6 +361,19 @@ class _RecentRecordings extends StatelessWidget {
   static String _when(MonitoringSession session) {
     final DateTime when = session.completedAt ?? session.startedAt;
     return '${when.day}/${when.month}';
+  }
+
+  static IconData _iconFor(MonitoringSession session) {
+    switch (session.assessment.slug) {
+      case 'spiral_drawing':
+        return Icons.grain_outlined;
+      case 'line_tracing':
+        return Icons.horizontal_rule_rounded;
+      case 'handwriting':
+        return Icons.draw_outlined;
+      default:
+        return Icons.touch_app_outlined;
+    }
   }
 
   static Color _qualityColor(AppColors colors, RecordingQuality quality) {
