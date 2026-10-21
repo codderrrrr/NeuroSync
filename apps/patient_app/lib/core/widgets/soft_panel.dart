@@ -95,17 +95,37 @@ class StatTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppTheme.displayFont,
-              fontSize: emphasis ? 26 : 22,
-              fontWeight: FontWeight.w600,
-              height: 1.15,
-              letterSpacing: -0.4,
-              color: valueColor ?? colors.label,
+          // The number changes when the data behind it does, and a number that
+          // changes in place is a number the patient has to notice. Swapping it
+          // out draws the eye to the change.
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 320),
+            switchInCurve: Curves.easeOutCubic,
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.35),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              );
+            },
+            child: Text(
+              value,
+              key: ValueKey<String>(value),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: AppTheme.displayFont,
+                fontSize: emphasis ? 26 : 22,
+                fontWeight: FontWeight.w600,
+                height: 1.15,
+                letterSpacing: -0.4,
+                color: valueColor ?? colors.label,
+              ),
             ),
           ),
           const SizedBox(height: 4),

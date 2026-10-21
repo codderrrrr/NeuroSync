@@ -274,14 +274,14 @@ void main() {
     // The first frame runs the post-frame callback that starts the load.
     await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CalmLoader), findsOneWidget);
     // Nothing is claimed while the answer is still outstanding.
     expect(find.text('No medications recorded yet'), findsNothing);
 
     pending.complete(http.Response('[]', 200));
     await tester.pumpAndSettle();
 
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(CalmLoader), findsNothing);
     expect(find.textContaining('No medications recorded yet'), findsOneWidget);
   });
 
@@ -302,6 +302,6 @@ void main() {
 
     expect(find.text('Could not load medications.'), findsOneWidget);
     expect(find.text('No medications recorded yet'), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(CalmLoader), findsNothing);
   });
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Responsive type scale for the dark first-time experience.
+/// Responsive type scale for the first-time experience.
 ///
 /// Onboarding headlines are display text, not body text: on a short viewport
 /// or at large system text sizes they shrink, while body and caption text
@@ -52,7 +52,7 @@ class IntroScale {
       );
 }
 
-/// Wraps the dark first-time experience in a bounded text scale.
+/// Wraps the first-time experience in a bounded text scale.
 ///
 /// Reading this text above ~1.3x trades legibility for a broken layout, so
 /// the scale is clamped within this subtree only - the signed-in screens stay

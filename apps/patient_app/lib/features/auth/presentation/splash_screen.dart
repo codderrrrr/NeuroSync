@@ -3,7 +3,7 @@ import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../features/intro/visuals/movement_mark.dart';
 
-/// Dark, minimal launch screen: the mark draws itself in, then the wordmark
+/// Minimal launch screen: the mark draws itself in, then the wordmark
 /// fades beneath it. No spinner, no progress text - the session check runs
 /// quietly behind the entrance.
 class SplashScreen extends StatefulWidget {

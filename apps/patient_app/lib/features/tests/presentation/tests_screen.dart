@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../app_scope.dart';
@@ -61,18 +62,30 @@ class _TestsScreenState extends State<TestsScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
             children: <Widget>[
-              const LargeTitle('Tests'),
-              const SizedBox(height: 4),
-              const MutedText(
-                'Your recordings, and what you noticed about yourself.',
+              const Reveal(child: LargeTitle('Tests')),
+              Reveal(
+                delay: const Duration(milliseconds: 60),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SizedBox(height: 4),
+                    MutedText(
+                      'Your recordings, and what you noticed about yourself.',
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 18),
-              SegmentedToggle(
-                labels: const <String>['Tests', 'Check-ins'],
-                selectedIndex: _showingTests ? 0 : 1,
-                onChanged: (int index) {
-                  setState(() => _showingTests = index == 0);
-                },
+              Reveal(
+                delay: const Duration(milliseconds: 110),
+                child: SegmentedToggle(
+                  labels: const <String>['Tests', 'Check-ins'],
+                  selectedIndex: _showingTests ? 0 : 1,
+                  onChanged: (int index) {
+                    HapticFeedback.selectionClick();
+                    setState(() => _showingTests = index == 0);
+                  },
+                ),
               ),
               const SizedBox(height: 18),
               if (_showingTests)
@@ -96,9 +109,10 @@ class _TestsScreenState extends State<TestsScreen> {
     if (history.isEmpty) {
       return const <Widget>[
         SoftPanel(
-          child: MutedText(
-            'No recordings yet. Your first test will appear here once you '
-            'have done one.',
+          child: EmptyNote(
+            icon: Icons.insights_outlined,
+            title: 'No recordings yet',
+            message: 'Your first test will appear here once you have done one.',
           ),
         ),
       ];
@@ -130,9 +144,11 @@ class _TestsScreenState extends State<TestsScreen> {
         const _LoadingPanel()
       else if (controller.checkIns.isEmpty)
         const SoftPanel(
-          child: MutedText(
-            'No check-ins yet. Record one to start a history of how you have '
-            'been feeling.',
+          child: EmptyNote(
+            icon: Icons.fact_check_outlined,
+            title: 'No check-ins yet',
+            message: 'Record one to start a history of how you have been '
+                'feeling.',
           ),
         )
       else
@@ -514,13 +530,7 @@ class _LoadingPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SoftPanel(
-      child: Center(
-        child: SizedBox(
-          height: 20,
-          width: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      ),
+      child: Center(child: CalmLoader(size: 20)),
     );
   }
 }

@@ -65,7 +65,7 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
               const Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 32),
-                  child: CircularProgressIndicator(),
+                  child: CalmLoader(),
                 ),
               )
             else if (medications.isEmpty)

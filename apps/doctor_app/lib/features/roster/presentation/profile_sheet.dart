@@ -100,7 +100,7 @@ class _ProfileSheet extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             const SectionHeader('Appearance'),
-            ThemeChoice(
+            ThemeChoiceBar(
               mode: theme.value,
               onChanged: theme.set,
             ),

@@ -147,28 +147,57 @@ class _HomeScreenState extends State<HomeScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
               children: <Widget>[
-                LargeTitle('Hi, ${auth.patient?.firstName ?? 'there'}'),
-                const SizedBox(height: 4),
-                const MutedText('Here is where you are today.'),
+                // The sections arrive one after another rather than all at
+                // once, so the eye is led down the page instead of being
+                // handed everything at the same time.
+                Reveal(
+                  child:
+                      LargeTitle('Hi, ${auth.patient?.firstName ?? 'there'}'),
+                ),
+                Reveal(
+                  delay: const Duration(milliseconds: 50),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(height: 4),
+                      MutedText('Here is where you are today.'),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 18),
-                _TodayStats(
-                  monitoring: monitoring,
-                  medications: medications,
+                Reveal(
+                  delay: const Duration(milliseconds: 100),
+                  child: _TodayStats(
+                    monitoring: monitoring,
+                    medications: medications,
+                  ),
                 ),
                 const SizedBox(height: 20),
-                const SectionHeader("Today's test"),
+                Reveal(
+                  delay: const Duration(milliseconds: 150),
+                  child: const SectionHeader("Today's test"),
+                ),
                 const SizedBox(height: 10),
-                TodaysAssessmentCard(
-                  plan: monitoring.plan,
-                  isLoading: monitoring.isLoading,
-                  errorMessage: monitoring.errorMessage,
-                  onStart: (_) => _startAssessment(monitoring),
-                  onRetry: monitoring.loadPlan,
+                Reveal(
+                  delay: const Duration(milliseconds: 180),
+                  child: TodaysAssessmentCard(
+                    plan: monitoring.plan,
+                    isLoading: monitoring.isLoading,
+                    errorMessage: monitoring.errorMessage,
+                    onStart: (_) => _startAssessment(monitoring),
+                    onRetry: monitoring.loadPlan,
+                  ),
                 ),
                 const SizedBox(height: 20),
-                const SectionHeader('Recent recordings'),
+                Reveal(
+                  delay: const Duration(milliseconds: 230),
+                  child: const SectionHeader('Recent recordings'),
+                ),
                 const SizedBox(height: 10),
-                _RecentRecordings(monitoring: monitoring),
+                Reveal(
+                  delay: const Duration(milliseconds: 260),
+                  child: _RecentRecordings(monitoring: monitoring),
+                ),
               ],
             ),
           );
@@ -262,19 +291,17 @@ class _RecentRecordings extends StatelessWidget {
 
     if (monitoring.isLoading && !monitoring.hasLoadedHistory) {
       return const SoftPanel(
-        child: Center(
-          child: SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
+        child: Center(child: CalmLoader(size: 20)),
       );
     }
 
     if (history.isEmpty) {
       return const SoftPanel(
-        child: MutedText('Your recordings will appear here.'),
+        child: EmptyNote(
+          icon: Icons.insights_outlined,
+          title: 'No recordings yet',
+          message: 'Your first test will appear here once you have done one.',
+        ),
       );
     }
 

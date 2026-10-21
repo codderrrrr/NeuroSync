@@ -93,19 +93,37 @@ void main() {
       });
     });
 
-    test('the neutrals are warm, not clinical blue', () {
-      // The page and the wells carry a trace of yellow: a warm ivory ground.
-      // The card is pure white, so it reads as paper laid on that ground
-      // rather than as another tint of it.
-      for (final Color warm in <Color>[
+    test('the neutrals are cool, not yellow', () {
+      // A warm ivory reads as yellow once it is a whole screen, and a patient
+      // who finds it unpleasant finds it on every page. The neutrals are
+      // blue-grey instead.
+      for (final Color neutral in <Color>[
         AppColors.light.background,
         AppColors.light.surfaceSunken,
+        AppColors.light.surfaceRaised,
+        AppColors.light.separator,
+        AppColors.light.label,
+        AppColors.light.secondaryLabel,
       ]) {
-        final HSLColor hsl = HSLColor.fromColor(warm);
-        expect(hsl.hue, inInclusiveRange(30, 90), reason: '$warm');
-        expect(hsl.saturation, greaterThan(0), reason: '$warm');
+        final HSLColor hsl = HSLColor.fromColor(neutral);
+        expect(hsl.hue, inInclusiveRange(195, 225), reason: '$neutral');
       }
       expect(AppColors.light.surface, const Color(0xFFFFFFFF));
+    });
+
+    test('the dark neutrals are cool too', () {
+      for (final Color neutral in <Color>[
+        AppColors.dark.background,
+        AppColors.dark.surface,
+        AppColors.dark.surfaceSunken,
+        AppColors.dark.surfaceRaised,
+        AppColors.dark.separator,
+        AppColors.dark.label,
+        AppColors.dark.secondaryLabel,
+      ]) {
+        final HSLColor hsl = HSLColor.fromColor(neutral);
+        expect(hsl.hue, inInclusiveRange(195, 225), reason: '$neutral');
+      }
     });
 
     test('the accent is sage and the action is terracotta', () {

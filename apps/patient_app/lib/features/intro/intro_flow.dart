@@ -109,9 +109,9 @@ class _IntroFlowState extends State<IntroFlow> {
     return _crossfade(stage);
   }
 
-  /// Every stage of the first-time experience sits on the dark base and hands
-  /// over with a short crossfade, so neither the handover between stages nor
-  /// the frame behind them can flash another colour.
+  /// Every stage of the first-time experience sits on the app's own base and
+  /// hands over with a short crossfade, so neither the handover between
+  /// stages nor the frame behind them can flash another colour.
   Widget _crossfade(Widget child) => ColoredBox(
         color: AppColors.of(context).background,
         child: AnimatedSwitcher(

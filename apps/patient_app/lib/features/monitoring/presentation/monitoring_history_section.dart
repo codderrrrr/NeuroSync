@@ -20,13 +20,7 @@ class MonitoringHistorySection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (controller.isLoading && !controller.hasLoadedHistory) {
       return const AppCard(
-        child: Center(
-          child: SizedBox(
-            height: 22,
-            width: 22,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
+        child: Center(child: CalmLoader(size: 22)),
       );
     }
 
