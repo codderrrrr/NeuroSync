@@ -129,7 +129,9 @@ Text('Hello', style: TextStyle(color: colors.label))
 ```
 
 - `AppColors.light` / `AppColors.dark` — the two moods, both measured for
-  WCAG AA (body text clears AAA)
+  WCAG AA (body text clears AAA). The neutrals are **blue-grey, not warm**:
+  a warm ivory reads as yellow once it is a whole screen, and a patient who
+  finds it unpleasant finds it on every page.
 - `AppTheme.light()` / `AppTheme.dark()` — install a mood's colours
 - `AppMetrics.comfortable` / `AppMetrics.compact` — how big the controls and
   the headings are. The patient app asks for `compact`; the portal asks for
@@ -172,6 +174,12 @@ The patient app has its own small vocabulary, in
 These are bespoke rather than Material's, because the stock controls were
 built for a different person: they assume a steady hand and a screen that is
 not being read at arm's length.
+
+The shared package also carries the pieces both applications need:
+`ThemeChoiceBar` (a bar of moods with a sliding thumb), `CalmLoader` (three
+dots that breathe, rather than a spinner that spins), `Reveal` (content that
+arrives rather than appearing) and `EmptyNote` (an empty state that says what
+is missing and what to do about it).
 
 ## Architecture
 
