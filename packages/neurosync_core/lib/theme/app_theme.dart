@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_metrics.dart';
 
 /// NeuroSync's design system: the shape of every control, and the two moods
 /// the palette can take.
@@ -34,27 +35,27 @@ class AppTheme {
   /// The corner radius of a field or a chip.
   static const double fieldRadius = 16;
 
-  /// The height of a primary control: the one a patient is asked to press.
-  static const double controlHeight = 72;
-
-  /// The height of a secondary control.
-  static const double secondaryControlHeight = 56;
-
   /// The line height of body text. Long enough that a line of text is a row
   /// of shapes rather than a smear.
   static const double bodyLineHeight = 1.5;
 
   // ----------------------------------------------------------------- light
 
-  /// The light mood: warm ivory, sage, terracotta.
-  static ThemeData light() => _build(AppColors.light, Brightness.light);
+  /// The light mood: a cool near-white ground, sage and terracotta.
+  static ThemeData light({AppMetrics metrics = AppMetrics.comfortable}) =>
+      _build(AppColors.light, Brightness.light, metrics);
 
   // ------------------------------------------------------------------ dark
 
   /// The dark mood: slate, lifted sage, lifted terracotta.
-  static ThemeData dark() => _build(AppColors.dark, Brightness.dark);
+  static ThemeData dark({AppMetrics metrics = AppMetrics.comfortable}) =>
+      _build(AppColors.dark, Brightness.dark, metrics);
 
-  static ThemeData _build(AppColors colors, Brightness brightness) {
+  static ThemeData _build(
+    AppColors colors,
+    Brightness brightness,
+    AppMetrics metrics,
+  ) {
     final ColorScheme scheme = ColorScheme.fromSeed(
       seedColor: colors.primary,
       brightness: brightness,
@@ -80,13 +81,13 @@ class AppTheme {
       inversePrimary: colors.primary,
     );
 
-    final TextTheme text = _textTheme(colors);
+    final TextTheme text = _textTheme(colors, metrics.textScale);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: colors.background,
-      extensions: <ThemeExtension<dynamic>>[colors],
+      extensions: <ThemeExtension<dynamic>>[colors, metrics],
       textTheme: text,
       appBarTheme: AppBarTheme(
         backgroundColor: colors.background,
@@ -179,81 +180,88 @@ class AppTheme {
 
   /// The type scale, in both families.
   ///
-  /// Body text never goes below 15pt and never has a line height under 1.5:
+  /// Body text is never below 13pt and never has a line height under 1.5:
   /// the reading load of a tremor or a tired eye is real, and this is the
   /// cheapest place to reduce it.
-  static TextTheme _textTheme(AppColors colors) {
+  ///
+  /// [scale] shrinks the headings only. The body is left alone, because the
+  /// complaint about a screen being too large is about the space the titles
+  /// take up, not about the words: a patient who has to lean in to read a
+  /// paragraph has been given a screen they cannot use.
+  static TextTheme _textTheme(AppColors colors, double scale) {
+    double size(double base) => (base * scale).roundToDouble();
+
     return TextTheme(
       displayLarge: TextStyle(
         fontFamily: displayFont,
-        fontSize: 40,
+        fontSize: size(34),
         fontWeight: FontWeight.w800,
         height: 1.2,
-        letterSpacing: -0.8,
+        letterSpacing: -0.6,
         color: colors.label,
       ),
       displayMedium: TextStyle(
         fontFamily: displayFont,
-        fontSize: 32,
+        fontSize: size(28),
         fontWeight: FontWeight.w800,
         height: 1.25,
-        letterSpacing: -0.5,
+        letterSpacing: -0.4,
         color: colors.label,
       ),
       displaySmall: TextStyle(
         fontFamily: displayFont,
-        fontSize: 28,
+        fontSize: size(24),
         fontWeight: FontWeight.w600,
         height: 1.3,
-        letterSpacing: -0.3,
+        letterSpacing: -0.2,
         color: colors.label,
       ),
       headlineLarge: TextStyle(
         fontFamily: displayFont,
-        fontSize: 26,
+        fontSize: size(22),
         fontWeight: FontWeight.w600,
         height: 1.35,
-        letterSpacing: -0.3,
+        letterSpacing: -0.2,
         color: colors.label,
       ),
       headlineMedium: TextStyle(
         fontFamily: displayFont,
-        fontSize: 22,
+        fontSize: size(19),
         fontWeight: FontWeight.w600,
         height: 1.4,
         color: colors.label,
       ),
       headlineSmall: TextStyle(
         fontFamily: displayFont,
-        fontSize: 19,
+        fontSize: size(17),
         fontWeight: FontWeight.w600,
         height: 1.4,
         color: colors.label,
       ),
       titleLarge: TextStyle(
         fontFamily: displayFont,
-        fontSize: 19,
+        fontSize: size(17),
         fontWeight: FontWeight.w600,
         height: 1.4,
         color: colors.label,
       ),
       titleMedium: TextStyle(
         fontFamily: bodyFont,
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: FontWeight.w600,
         height: 1.45,
         color: colors.label,
       ),
       titleSmall: TextStyle(
         fontFamily: bodyFont,
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: FontWeight.w600,
         height: 1.45,
         color: colors.label,
       ),
       bodyLarge: TextStyle(
         fontFamily: bodyFont,
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: FontWeight.w400,
         height: bodyLineHeight,
         color: colors.label,
@@ -274,21 +282,21 @@ class AppTheme {
       ),
       labelLarge: TextStyle(
         fontFamily: bodyFont,
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: FontWeight.w600,
         height: 1.4,
         color: colors.label,
       ),
       labelMedium: TextStyle(
         fontFamily: bodyFont,
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: FontWeight.w500,
         height: 1.4,
         color: colors.label,
       ),
       labelSmall: TextStyle(
         fontFamily: bodyFont,
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w500,
         height: 1.4,
         color: colors.secondaryLabel,

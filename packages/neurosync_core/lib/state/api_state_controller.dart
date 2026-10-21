@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../network/api_exception.dart';
 
@@ -8,12 +8,19 @@ import '../network/api_exception.dart';
 /// A controller that reads from the API and one that writes to it both need
 /// the same three things: a flag saying a request is in flight, the message
 /// when it failed, and a rule that an API failure is reported rather than
-/// thrown. Stating them once means a new controller cannot get the error
-/// handling subtly wrong.
+/// thrown.
+///
+/// A controller that reads more than one thing needs more than one message:
+/// a history that will not load must not blank the error of a plan that
+/// will. Each read therefore writes to its own named slot, and the default
+/// slot is the controller's main one.
 mixin ApiStateController on ChangeNotifier {
+  /// The slot a controller's main read writes to.
+  static const String defaultSlot = 'default';
+
   bool _isLoading = false;
   bool _isSubmitting = false;
-  String? _errorMessage;
+  final Map<String, String?> _errors = <String, String?>{};
 
   /// Whether a read is in flight.
   bool get isLoading => _isLoading;
@@ -21,8 +28,11 @@ mixin ApiStateController on ChangeNotifier {
   /// Whether a write is in flight.
   bool get isSubmitting => _isSubmitting;
 
-  /// The last API failure, or null when there has not been one.
-  String? get errorMessage => _errorMessage;
+  /// The last failure of the controller's main read.
+  String? get errorMessage => _errors[defaultSlot];
+
+  /// The last failure of one named read.
+  String? errorFor(String slot) => _errors[slot];
 
   /// Runs a read, surfacing an API failure without losing what is on screen.
   ///
@@ -32,13 +42,14 @@ mixin ApiStateController on ChangeNotifier {
   /// [onError] handles a failure the caller expects and wants to answer
   /// itself, such as a 404 that means "there is nothing here yet" rather than
   /// "something went wrong". Without one, the failure becomes the error
-  /// message.
+  /// message for [slot].
   Future<void> runLoad(
     Future<void> Function() action, {
+    String slot = defaultSlot,
     void Function(ApiException error)? onError,
   }) async {
     _isLoading = true;
-    _errorMessage = null;
+    _errors[slot] = null;
     notifyListeners();
     try {
       await action();
@@ -46,7 +57,7 @@ mixin ApiStateController on ChangeNotifier {
       if (onError != null) {
         onError(error);
       } else {
-        _errorMessage = error.message;
+        _errors[slot] = error.message;
       }
     } finally {
       _isLoading = false;
@@ -56,17 +67,20 @@ mixin ApiStateController on ChangeNotifier {
 
   /// Runs a write, reporting whether it succeeded.
   ///
-  /// An API failure is reported through [errorMessage] and the write reports
-  /// false, rather than throwing into the widget that asked for it.
-  Future<bool> runSubmit(Future<void> Function() action) async {
+  /// An API failure is reported through the error message and the write
+  /// reports false, rather than throwing into the widget that asked for it.
+  Future<bool> runSubmit(
+    Future<void> Function() action, {
+    String slot = defaultSlot,
+  }) async {
     _isSubmitting = true;
-    _errorMessage = null;
+    _errors[slot] = null;
     notifyListeners();
     try {
       await action();
       return true;
     } on ApiException catch (error) {
-      _errorMessage = error.message;
+      _errors[slot] = error.message;
       return false;
     } finally {
       _isSubmitting = false;
@@ -78,14 +92,17 @@ mixin ApiStateController on ChangeNotifier {
   ///
   /// For a write whose result is the point of the call, so a failure is
   /// reported as no result rather than as no result *and* a failure.
-  Future<T?> runSubmitValue<T>(Future<T?> Function() action) async {
+  Future<T?> runSubmitValue<T>(
+    Future<T?> Function() action, {
+    String slot = defaultSlot,
+  }) async {
     _isSubmitting = true;
-    _errorMessage = null;
+    _errors[slot] = null;
     notifyListeners();
     try {
       return await action();
     } on ApiException catch (error) {
-      _errorMessage = error.message;
+      _errors[slot] = error.message;
       return null;
     } finally {
       _isSubmitting = false;
@@ -94,11 +111,11 @@ mixin ApiStateController on ChangeNotifier {
   }
 
   /// Clears the error message, if there is one.
-  void clearError() {
-    if (_errorMessage == null) {
+  void clearError({String slot = defaultSlot}) {
+    if (_errors[slot] == null) {
       return;
     }
-    _errorMessage = null;
+    _errors[slot] = null;
     notifyListeners();
   }
 
@@ -107,8 +124,8 @@ mixin ApiStateController on ChangeNotifier {
   /// A controller that rejects its own input before making a request uses
   /// this, so the message reaches the screen the same way an API failure
   /// does.
-  void reportError(String message) {
-    _errorMessage = message;
+  void reportError(String message, {String slot = defaultSlot}) {
+    _errors[slot] = message;
     notifyListeners();
   }
 }

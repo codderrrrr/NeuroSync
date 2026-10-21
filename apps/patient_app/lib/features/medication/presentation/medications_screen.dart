@@ -43,62 +43,58 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: widget.controller,
-          builder: (BuildContext context, Widget? child) {
-            final List<Medication> medications = widget.controller.medications;
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
-              children: <Widget>[
-                const LargeTitle('Medications'),
-                const SizedBox(height: 6),
-                const MutedText(
-                  'Recorded exactly as you enter them. NeuroSync does not '
-                  'check doses or suggest changes.',
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (BuildContext context, Widget? child) {
+        final List<Medication> medications = widget.controller.medications;
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+          children: <Widget>[
+            const LargeTitle('Medications'),
+            const SizedBox(height: 6),
+            const MutedText(
+              'Recorded exactly as you enter them. NeuroSync does not '
+              'check doses or suggest changes.',
+            ),
+            const SizedBox(height: 20),
+            if (widget.controller.errorMessage != null) ...<Widget>[
+              ErrorText(widget.controller.errorMessage!),
+              const SizedBox(height: 12),
+            ],
+            if (widget.controller.isLoading && medications.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: CircularProgressIndicator(),
                 ),
-                const SizedBox(height: 20),
-                if (widget.controller.errorMessage != null) ...<Widget>[
-                  ErrorText(widget.controller.errorMessage!),
-                  const SizedBox(height: 12),
-                ],
-                if (widget.controller.isLoading && medications.isEmpty)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 32),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else if (medications.isEmpty)
-                  AppCard(
-                    child: MutedText(
-                      widget.controller.hasLoaded
-                          ? 'No medications recorded yet. Add one to attach '
-                              'timing context to your monitoring sessions.'
-                          : 'Could not load your medications.',
-                    ),
-                  )
-                else
-                  for (final Medication medication in medications)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _MedicationRow(
-                        medication: medication,
-                        controller: widget.controller,
-                      ),
-                    ),
-                const SizedBox(height: 16),
-                PrimaryButton(
-                  label: 'Add medication',
-                  onPressed: _addMedication,
-                  tactile: true,
+              )
+            else if (medications.isEmpty)
+              AppCard(
+                child: MutedText(
+                  widget.controller.hasLoaded
+                      ? 'No medications recorded yet. Add one to attach '
+                          'timing context to your monitoring sessions.'
+                      : 'Could not load your medications.',
                 ),
-              ],
-            );
-          },
-        ),
-      ),
+              )
+            else
+              for (final Medication medication in medications)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _MedicationRow(
+                    medication: medication,
+                    controller: widget.controller,
+                  ),
+                ),
+            const SizedBox(height: 16),
+            PrimaryButton(
+              label: 'Add medication',
+              onPressed: _addMedication,
+              tactile: true,
+            ),
+          ],
+        );
+      },
     );
   }
 }

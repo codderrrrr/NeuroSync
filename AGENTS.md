@@ -120,8 +120,8 @@ package's dependencies change, or CI's `--enforce-lockfile` fails.
 ### The design system
 
 The palette is a `ThemeExtension`, not a set of constants, because the same
-token has to mean two things: ink on warm ivory in the light, ink on slate in
-the dark.
+token has to mean two things: ink on cool near-white in the light, ink on slate
+in the dark.
 
 ```dart
 final AppColors colors = AppColors.of(context);
@@ -131,7 +131,10 @@ Text('Hello', style: TextStyle(color: colors.label))
 - `AppColors.light` / `AppColors.dark` — the two moods, both measured for
   WCAG AA (body text clears AAA)
 - `AppTheme.light()` / `AppTheme.dark()` — install a mood's colours
-- `AppTheme.controlHeight` (72) — a primary control; secondary is 56
+- `AppMetrics.comfortable` / `AppMetrics.compact` — how big the controls and
+  the headings are. The patient app asks for `compact`; the portal asks for
+  `comfortable`. Body text is never scaled: a phone in one hand wants tighter
+  headings, not smaller words.
 - `AppTheme.bodyLineHeight` (1.5) — body text never goes tighter
 - `ThemeController` + `ThemePrefs` — the patient's choice of mood, persisted
   with the secure store, read before the first frame
@@ -153,6 +156,22 @@ would be worse than a stray tick.
 **A recording is not a test.** The runners show a ring that fills, not a
 counting number. A large changing digit makes the last seconds arrive as
 pressure.
+
+### The patient app's own widgets
+
+The patient app has its own small vocabulary, in
+`apps/patient_app/lib/core/widgets/`:
+
+- `FloatingTabBar` — the navigation bar. A floating panel with a soft shadow
+  and a sliding capsule. Every destination keeps its label: five unlabelled
+  icons would be a puzzle for the person using this app.
+- `SoftPanel`, `StatTile`, `StatePill` — the surfaces the patient's
+  information sits on.
+- `SegmentedToggle` — a two-way choice with both answers visible.
+
+These are bespoke rather than Material's, because the stock controls were
+built for a different person: they assume a steady hand and a screen that is
+not being read at arm's length.
 
 ## Architecture
 
@@ -179,6 +198,23 @@ Each module typically contains: `models.py`, `schemas.py`, `service.py`, `router
 Tests live in top-level `tests/`:
 - `tests/unit/` — domain logic, pure functions
 - `tests/integration/` — API endpoints, DB interactions
+
+### The patient app's five destinations
+
+`MainShell` holds the five tabs the patient moves between, and each one is a
+question they actually have when they open the app:
+
+| Tab | Answers |
+|---|---|
+| **Home** | how am I doing, and what is the one thing to do next |
+| **Medicine** | what am I taking |
+| **Tests** | what did my recordings show, and what have I noticed |
+| **Doctors** | who is looking after me |
+| **Account** | who am I, how does it look, and how do I sign out |
+
+A tab screen is a **body, not a page**: it must not bring its own
+`Scaffold`, because two Scaffolds stacked on each other double the system
+insets. The shell provides the one `Scaffold` and the `SafeArea`.
 
 ### The monitoring module is split by responsibility
 

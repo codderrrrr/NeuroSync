@@ -64,8 +64,10 @@ class _NeuroSyncAppState extends State<NeuroSyncApp> {
             debugShowCheckedModeBanner: false,
             // Two moods, one palette: the warm ivory for daylight, the slate
             // for the evening and the bedside. The patient chooses.
-            theme: AppTheme.light(),
-            darkTheme: AppTheme.dark(),
+            // The phone is held in one hand, often by someone who is not
+            // young, so the app is built a size tighter than the portal.
+            theme: AppTheme.light(metrics: AppMetrics.compact),
+            darkTheme: AppTheme.dark(metrics: AppMetrics.compact),
             themeMode: widget.themeController.value,
             builder: (BuildContext context, Widget? child) =>
                 AnnotatedRegion<SystemUiOverlayStyle>(

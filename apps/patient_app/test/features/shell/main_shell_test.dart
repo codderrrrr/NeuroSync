@@ -100,10 +100,8 @@ int? selectedTab(WidgetTester tester) =>
     tester.widget<IndexedStack>(find.byType(IndexedStack)).index;
 
 void main() {
-  testWidgets('opens on the home tab with the account summary',
-      (WidgetTester tester) async {
-    // A tall viewport so the whole home list, including the log-out button,
-    // is on screen at once.
+  testWidgets('opens on the home tab', (WidgetTester tester) async {
+    // A tall viewport so the whole home screen is on screen at once.
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(400, 1600);
     addTearDown(tester.view.reset);
@@ -113,24 +111,56 @@ void main() {
 
     expect(selectedTab(tester), 0);
     expect(find.text('Hi, there'), findsOneWidget);
-    expect(find.text('Log out'), findsOneWidget);
-    // The home tab no longer carries the doctor-linking module.
+    // The home tab no longer carries the doctor-linking module, and the
+    // account details have their own destination.
     expect(find.text('Add your doctor'), findsNothing);
+    expect(find.text('Log out'), findsNothing);
   });
 
-  testWidgets('check-ins live on their own tab', (WidgetTester tester) async {
+  testWidgets('the account is its own tab', (WidgetTester tester) async {
     await tester.pumpWidget(wrapShell());
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Account'));
+    await tester.pumpAndSettle();
+
+    expect(selectedTab(tester), 4);
+    expect(find.text('Log out'), findsOneWidget);
+  });
+
+  testWidgets('the tests tab holds the recordings and the check-ins',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(wrapShell());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Tests'));
+    await tester.pumpAndSettle();
+
+    expect(selectedTab(tester), 2);
+    // The recordings are what the tab opens on.
+    expect(find.text('Record a check-in'), findsNothing);
+
+    // The check-ins are the other half of the same question.
     await tester.tap(find.text('Check-ins'));
+    await tester.pumpAndSettle();
+    expect(find.text('Record a check-in'), findsOneWidget);
+    expect(find.textContaining('No check-ins yet'), findsOneWidget);
+  });
+
+  testWidgets('the medicine tab holds the medication list',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(wrapShell());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Medicine'));
     await tester.pumpAndSettle();
 
     expect(selectedTab(tester), 1);
-    expect(find.text('Record a check-in'), findsOneWidget);
-    expect(find.text('No check-ins yet'), findsOneWidget);
+    expect(find.text('Medications'), findsOneWidget);
+    expect(find.text('Add medication'), findsOneWidget);
   });
 
-  testWidgets('doctor linking lives on its own tab',
+  testWidgets('doctor linking lives on their own tab',
       (WidgetTester tester) async {
     await tester.pumpWidget(wrapShell());
     await tester.pumpAndSettle();
@@ -138,7 +168,7 @@ void main() {
     await tester.tap(find.text('Doctors'));
     await tester.pumpAndSettle();
 
-    expect(selectedTab(tester), 2);
+    expect(selectedTab(tester), 3);
     expect(find.text('Care team'), findsOneWidget);
     expect(find.text('Add your doctor'), findsOneWidget);
   });

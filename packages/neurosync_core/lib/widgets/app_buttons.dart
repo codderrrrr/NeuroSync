@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_metrics.dart';
 import '../theme/app_theme.dart';
 import '../theme/intro_scale.dart';
 import 'tactile_button.dart';
@@ -64,7 +65,7 @@ class PrimaryButton extends StatelessWidget {
           : Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
     return SizedBox(
-      height: AppTheme.controlHeight,
+      height: AppMetrics.of(context).primaryControlHeight,
       child: tactile ? TactileButton(enabled: enabled, child: button) : button,
     );
   }
@@ -118,7 +119,7 @@ class SecondaryButton extends StatelessWidget {
       child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
     return SizedBox(
-      height: AppTheme.secondaryControlHeight,
+      height: AppMetrics.of(context).secondaryControlHeight,
       child: tactile
           ? TactileButton(enabled: onPressed != null, child: button)
           : button,

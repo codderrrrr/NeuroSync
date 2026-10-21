@@ -143,7 +143,7 @@ Future<AuthController> pumpPatientScreen(
     patientScope(
       controllers: controllers,
       child: MaterialApp(
-        theme: AppTheme.dark(),
+        theme: AppTheme.dark(metrics: AppMetrics.compact),
         home: home,
       ),
     ),

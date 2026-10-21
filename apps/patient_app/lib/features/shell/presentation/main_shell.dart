@@ -4,15 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:neurosync_core/neurosync_core.dart';
 
 import '../../../app_scope.dart';
-import '../../check_ins/presentation/check_in_screen.dart';
+import '../../../core/widgets/floating_tab_bar.dart';
+import '../../account/presentation/account_screen.dart';
 import '../../doctor_links/presentation/doctors_screen.dart';
 import '../../home/presentation/home_screen.dart';
+import '../../medication/presentation/medications_screen.dart';
+import '../../medication/state/medication_controller.dart';
+import '../../tests/presentation/tests_screen.dart';
 
-/// The signed-in shell: a bottom navigation bar over the app's three modules.
+/// The signed-in shell: five destinations over the patient's own information.
 ///
-/// Each module owns its tab, so home, check-ins and doctor linking stay
-/// decoupled and can each grow without crowding the others. An [IndexedStack]
-/// keeps every tab's state (scroll position, loaded data) while switching.
+/// The destinations are the questions a patient actually has when they open
+/// the app: how am I doing, what am I taking, what did my tests show, who is
+/// looking after me, and where do I sign out. Each one is a tab, so the
+/// patient's place in each is kept while they move between them.
 ///
 /// The shell is also what keeps those tabs current. A doctor assigns an
 /// exercise, or accepts a link request, on their own machine; nothing pushes
@@ -33,14 +38,40 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   /// first successful load, so a refresh that changes nothing is invisible.
   static const Duration _pollInterval = Duration(seconds: 20);
 
+  /// The medication list is a tab, so its controller is held here rather than
+  /// looked up on every build.
+  MedicationController? _medications;
+
   int _index = 0;
   Timer? _pollTimer;
   bool _isRefreshing = false;
 
-  static const List<Widget> _tabs = <Widget>[
-    HomeScreen(),
-    CheckInsScreen(),
-    DoctorsScreen(),
+  static const List<TabDestination> _destinations = <TabDestination>[
+    TabDestination(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home_rounded,
+      label: 'Home',
+    ),
+    TabDestination(
+      icon: Icons.medication_outlined,
+      selectedIcon: Icons.medication_rounded,
+      label: 'Medicine',
+    ),
+    TabDestination(
+      icon: Icons.insights_outlined,
+      selectedIcon: Icons.insights_rounded,
+      label: 'Tests',
+    ),
+    TabDestination(
+      icon: Icons.people_outline_rounded,
+      selectedIcon: Icons.people_rounded,
+      label: 'Doctors',
+    ),
+    TabDestination(
+      icon: Icons.person_outline_rounded,
+      selectedIcon: Icons.person_rounded,
+      label: 'Account',
+    ),
   ];
 
   @override
@@ -48,6 +79,15 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _pollTimer = Timer.periodic(_pollInterval, (_) => _refresh());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The medication list is a tab, so its controller is held here rather than
+    // looked up on every build. It cannot be looked up in initState: an
+    // inherited widget is not available until the dependencies are read.
+    _medications ??= AppScope.of(context).medications;
   }
 
   @override
@@ -99,30 +139,25 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final AppColors colors = AppColors.of(context);
+    final List<Widget> tabs = <Widget>[
+      const HomeScreen(),
+      MedicationsScreen(
+          controller: _medications ?? AppScope.of(context).medications),
+      const TestsScreen(),
+      const DoctorsScreen(),
+      const AccountScreen(),
+    ];
+
     return Scaffold(
-      body: IndexedStack(index: _index, children: _tabs),
-      bottomNavigationBar: NavigationBar(
+      backgroundColor: colors.background,
+      // The bar floats, so the page needs room to scroll under it.
+      extendBody: true,
+      body: IndexedStack(index: _index, children: tabs),
+      bottomNavigationBar: FloatingTabBar(
+        destinations: _destinations,
         selectedIndex: _index,
-        onDestinationSelected: _select,
-        backgroundColor: AppColors.of(context).surface,
-        surfaceTintColor: Colors.transparent,
-        destinations: const <NavigationDestination>[
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.fact_check_outlined),
-            selectedIcon: Icon(Icons.fact_check),
-            label: 'Check-ins',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.medical_services_outlined),
-            selectedIcon: Icon(Icons.medical_services),
-            label: 'Doctors',
-          ),
-        ],
+        onSelected: _select,
       ),
     );
   }

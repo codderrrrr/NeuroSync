@@ -7,6 +7,7 @@ import 'package:neurosync_patient/features/auth/presentation/splash_screen.dart'
 import 'package:neurosync_patient/features/intro/onboarding_screen.dart';
 import 'package:neurosync_patient/features/monitoring/models/session_result.dart';
 import 'package:neurosync_patient/features/monitoring/presentation/session_result_screen.dart';
+import 'package:neurosync_patient/core/widgets/floating_tab_bar.dart';
 import 'package:neurosync_patient/features/shell/presentation/main_shell.dart';
 import 'package:neurosync_core/neurosync_core.dart';
 
@@ -102,8 +103,7 @@ Widget _scope(Widget home, {Size? viewport, WidgetTester? tester}) {
 void main() {
   group('the signed-in shell holds together on every phone', () {
     for (final Size size in _viewports) {
-      testWidgets(
-          'all three tabs at ${size.width.toInt()}x${size.height.toInt()}',
+      testWidgets('every tab at ${size.width.toInt()}x${size.height.toInt()}',
           (WidgetTester tester) async {
         await tester.pumpWidget(
             _scope(const MainShell(), viewport: size, tester: tester));
@@ -111,16 +111,19 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text('Begin test'), findsOneWidget);
-        // The bottom navigation and today's action both fit at every width.
-        expect(find.byType(NavigationBar), findsOneWidget);
+        // The floating bar and today's action both fit at every width.
+        expect(find.byType(FloatingTabBar), findsOneWidget);
 
-        await tester.tap(find.text('Check-ins'));
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull);
-
-        await tester.tap(find.text('Doctors'));
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull);
+        for (final String tab in <String>[
+          'Medicine',
+          'Tests',
+          'Doctors',
+          'Account',
+        ]) {
+          await tester.tap(find.text(tab));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull, reason: tab);
+        }
       });
     }
   });

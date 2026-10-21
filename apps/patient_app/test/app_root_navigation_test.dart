@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:neurosync_core/neurosync_core.dart';
 import 'package:neurosync_patient/app.dart';
+import 'package:neurosync_patient/core/widgets/floating_tab_bar.dart';
 
 import 'test_support.dart';
 
@@ -47,22 +48,33 @@ void main() {
   testWidgets('a signed-in patient lands in the shell, not a bare home screen',
       (WidgetTester tester) async {
     // Regression: the root rendered HomeScreen directly, so MainShell never
-    // appeared and the check-ins and doctor-linking tabs were unreachable.
+    // appeared and the tests, medicine and doctor-linking tabs were unreachable.
     await pumpSignedInApp(tester);
 
-    expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Check-ins'), findsOneWidget);
-    expect(find.text('Doctors'), findsOneWidget);
+    expect(find.byType(FloatingTabBar), findsOneWidget);
+    // Every destination keeps its label: five unlabelled icons would be a
+    // puzzle for the person using this app.
+    for (final String label in <String>[
+      'Home',
+      'Medicine',
+      'Tests',
+      'Doctors',
+      'Account',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
   });
 
-  testWidgets('check-ins are reachable from the root',
+  testWidgets('the tests tab is reachable from the root',
       (WidgetTester tester) async {
     await pumpSignedInApp(tester);
 
-    await tester.tap(find.text('Check-ins'));
+    await tester.tap(find.text('Tests'));
     await tester.pumpAndSettle();
 
+    // The check-ins are the second half of the tests tab.
+    await tester.tap(find.text('Check-ins'));
+    await tester.pumpAndSettle();
     expect(find.text('Record a check-in'), findsOneWidget);
   });
 
@@ -75,5 +87,15 @@ void main() {
 
     expect(find.text('Care team'), findsOneWidget);
     expect(find.text('Add your doctor'), findsOneWidget);
+  });
+
+  testWidgets('the account is reachable from the root',
+      (WidgetTester tester) async {
+    await pumpSignedInApp(tester);
+
+    await tester.tap(find.text('Account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Log out'), findsOneWidget);
   });
 }

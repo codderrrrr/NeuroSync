@@ -83,16 +83,20 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color activeTint;
   final Color dangerTint;
 
-  /// The colours of the light, warm-ivory mood.
+  /// The colours of the light mood: a cool near-white ground.
+  ///
+  /// The neutrals are blue-grey rather than cream. A warm ivory reads as
+  /// yellow once it is a whole screen, and a patient who finds it
+  /// unpleasant finds it on every page.
   ///
   /// Measured against [background] and [surface]:
-  ///   label            15.2:1 page   15.9:1 card
-  ///   secondaryLabel    5.7:1 page    6.0:1 card
-  ///   primary           7.0:1 page    7.3:1 card
-  ///   action            5.2:1 page    5.4:1 card
-  ///   pending           5.2:1 page    5.5:1 card
-  ///   active            5.1:1 page    5.4:1 card
-  ///   danger            6.2:1 page    6.5:1 card
+  ///   label            16.2:1 page   17.6:1 card
+  ///   secondaryLabel    5.7:1 page    6.1:1 card
+  ///   primary           6.8:1 page    7.3:1 card
+  ///   action            5.0:1 page    5.4:1 card
+  ///   pending           5.0:1 page    5.5:1 card
+  ///   active            5.0:1 page    5.4:1 card
+  ///   danger            6.0:1 page    6.5:1 card
   /// and each signal stays above 4.7:1 inside its own tinted chip.
   static const AppColors light = AppColors(
     background: Color(0xFFFBF9F5),

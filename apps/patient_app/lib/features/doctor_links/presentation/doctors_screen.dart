@@ -41,45 +41,41 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   Widget build(BuildContext context) {
     final DoctorLinkController links = AppScope.of(context).doctorLinks;
 
-    return Scaffold(
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: links,
-          builder: (BuildContext context, Widget? child) {
-            // A doctor accepting a request changes this list from their side,
-            // so the patient can pull to check without restarting the app.
-            return RefreshIndicator(
-              onRefresh: links.load,
-              color: AppColors.of(context).primary,
-              backgroundColor: AppColors.of(context).surface,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
-                children: <Widget>[
-                  const LargeTitle('Care team'),
-                  const SizedBox(height: 6),
-                  const MutedText(
-                    'Link a doctor with the code they gave you so they can '
-                    'follow your check-ins.',
-                  ),
-                  const SizedBox(height: 28),
-                  if (links.errorMessage != null) ...<Widget>[
-                    ErrorText(links.errorMessage!),
-                    const SizedBox(height: 12),
-                  ],
-                  DoctorLinkList(controller: links),
-                  const SizedBox(height: 24),
-                  PrimaryButton(
-                    label: 'Add your doctor',
-                    onPressed: _openAddDoctor,
-                    tactile: true,
-                  ),
-                ],
+    return ListenableBuilder(
+      listenable: links,
+      builder: (BuildContext context, Widget? child) {
+        // A doctor accepting a request changes this list from their side,
+        // so the patient can pull to check without restarting the app.
+        return RefreshIndicator(
+          onRefresh: links.load,
+          color: AppColors.of(context).primary,
+          backgroundColor: AppColors.of(context).surface,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
+            children: <Widget>[
+              const LargeTitle('Care team'),
+              const SizedBox(height: 6),
+              const MutedText(
+                'Link a doctor with the code they gave you so they can '
+                'follow your check-ins.',
               ),
-            );
-          },
-        ),
-      ),
+              const SizedBox(height: 28),
+              if (links.errorMessage != null) ...<Widget>[
+                ErrorText(links.errorMessage!),
+                const SizedBox(height: 12),
+              ],
+              DoctorLinkList(controller: links),
+              const SizedBox(height: 24),
+              PrimaryButton(
+                label: 'Add your doctor',
+                onPressed: _openAddDoctor,
+                tactile: true,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

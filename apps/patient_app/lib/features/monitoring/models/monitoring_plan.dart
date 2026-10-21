@@ -128,4 +128,8 @@ class MonitoringPlan {
     }
     return null;
   }
+
+  /// How many of today's exercises are already done.
+  int get completedTodayCount => items.fold<int>(
+      0, (int sum, MonitoringPlanItem item) => sum + item.completedToday);
 }

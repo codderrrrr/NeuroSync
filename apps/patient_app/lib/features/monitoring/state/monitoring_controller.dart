@@ -44,11 +44,21 @@ class MonitoringController extends ChangeNotifier with ApiStateController {
         },
       );
 
-  /// Loads the completed-session history for the check-ins tab.
-  Future<void> loadHistory() => runLoad(() async {
-        _history = await _repository.listSessions();
-        _hasLoadedHistory = true;
-      });
+  /// Loads the completed-session history for the tests tab.
+  ///
+  /// The history writes to its own error slot: a history that will not load
+  /// must not blank the plan's error, or a patient with a plan would be told
+  /// their plan is broken.
+  Future<void> loadHistory() => runLoad(
+        () async {
+          _history = await _repository.listSessions();
+          _hasLoadedHistory = true;
+        },
+        slot: historySlot,
+      );
+
+  /// The error slot the history writes to.
+  static const String historySlot = 'history';
 
   /// Opens a session for a plan item and remembers it as the active one.
   Future<bool> startSession(MonitoringPlanItem item) => runSubmit(() async {
