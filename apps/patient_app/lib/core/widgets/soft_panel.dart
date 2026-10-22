@@ -43,18 +43,19 @@ class SoftPanel extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: padding,
-        child: child,
+        // The InkWell is inside the Material, so a press on the panel leaves
+        // its mark on the panel rather than behind it.
+        child: onTap == null
+            ? child
+            : InkWell(
+                borderRadius: BorderRadius.circular(radius),
+                onTap: onTap,
+                child: child,
+              ),
       ),
     );
 
-    if (onTap == null) {
-      return panel;
-    }
-    return InkWell(
-      borderRadius: BorderRadius.circular(radius),
-      onTap: onTap,
-      child: panel,
-    );
+    return panel;
   }
 }
 
@@ -115,48 +116,51 @@ class SegmentedToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppColors colors = AppColors.of(context);
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: colors.surfaceSunken,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final double itemWidth = constraints.maxWidth / labels.length;
-          return Stack(
-            children: <Widget>[
-              Positioned(
-                left: itemWidth * selectedIndex,
-                top: 0,
-                bottom: 0,
-                width: itemWidth,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  decoration: BoxDecoration(
-                    color: colors.surface,
-                    borderRadius: BorderRadius.circular(9),
+    // The track is a Material, so the ink of a press is printed on the track
+    // the patient is pressing rather than behind it.
+    return Material(
+      color: colors.surfaceSunken,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.all(3),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double itemWidth = constraints.maxWidth / labels.length;
+            return Stack(
+              children: <Widget>[
+                Positioned(
+                  left: itemWidth * selectedIndex,
+                  top: 0,
+                  bottom: 0,
+                  width: itemWidth,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
                   ),
                 ),
-              ),
-              Row(
-                children: <Widget>[
-                  for (int index = 0; index < labels.length; index++)
-                    SizedBox(
-                      width: itemWidth,
-                      child: _ToggleItem(
-                        label: labels[index],
-                        selected: index == selectedIndex,
-                        onTap: () => onChanged(index),
+                Row(
+                  children: <Widget>[
+                    for (int index = 0; index < labels.length; index++)
+                      SizedBox(
+                        width: itemWidth,
+                        child: _ToggleItem(
+                          label: labels[index],
+                          selected: index == selectedIndex,
+                          onTap: () => onChanged(index),
+                        ),
                       ),
-                    ),
-                ],
-              ),
-            ],
-          );
-        },
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -179,20 +183,27 @@ class _ToggleItem extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(9),
-        onTap: onTap,
-        child: Center(
-          child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
-            style: TextStyle(
-              fontFamily: AppTheme.bodyFont,
-              fontSize: 13,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              height: 1.2,
-              color: selected ? colors.label : colors.secondaryLabel,
+      // The item carries its own Material, so the ink of a press is printed
+      // above the sliding capsule rather than under it. The capsule covers
+      // the chosen side, and a press on the chosen side should still leave
+      // a mark.
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(9),
+          onTap: onTap,
+          child: Center(
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontFamily: AppTheme.bodyFont,
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                height: 1.2,
+                color: selected ? colors.label : colors.secondaryLabel,
+              ),
+              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
-            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
         ),
       ),

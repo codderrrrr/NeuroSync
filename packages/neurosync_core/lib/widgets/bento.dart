@@ -77,12 +77,13 @@ class BentoCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppColors colors = AppColors.of(context);
+    final BorderRadius radius = BorderRadius.circular(AppTheme.cardRadius);
+
     final Widget panel = Container(
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius: radius,
         border: accent == null
             ? null
             : Border.all(color: accent!.withValues(alpha: 0.35), width: 1.5),
@@ -90,16 +91,15 @@ class BentoCell extends StatelessWidget {
       child: child,
     );
 
-    if (onTap == null) {
-      return panel;
-    }
+    // A cell is a Material, so the ink a press makes is printed on the cell
+    // itself rather than hidden behind it.
     return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: onTap,
-        child: panel,
-      ),
+      color: colors.surface,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null
+          ? panel
+          : InkWell(borderRadius: radius, onTap: onTap, child: panel),
     );
   }
 }

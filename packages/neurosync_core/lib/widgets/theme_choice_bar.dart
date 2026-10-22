@@ -163,55 +163,61 @@ class _Choice extends StatelessWidget {
       button: true,
       selected: selected,
       label: '${option.label} appearance',
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Center(
-          // The mark sits above the word rather than beside it, so the word
-          // is centred in its portion and the raised card that marks the
-          // choice encloses both of them.
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              AnimatedScale(
-                scale: selected ? 1.12 : 1,
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutBack,
-                // The mark changes colour with the thumb rather than at the
-                // moment the choice is made, so the two travel together.
-                child: TweenAnimationBuilder<Color?>(
-                  tween: ColorTween(
-                    begin: selected ? colors.secondaryLabel : colors.primary,
-                    end: color,
-                  ),
+      // The choice carries its own Material, so the ink of a press is printed
+      // above the raised card rather than under it. The card covers the
+      // chosen mood, and a press on it should still leave a mark.
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Center(
+            // The mark sits above the word rather than beside it, so the word
+            // is centred in its portion and the raised card that marks the
+            // choice encloses both of them.
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                AnimatedScale(
+                  scale: selected ? 1.12 : 1,
                   duration: const Duration(milliseconds: 240),
-                  builder: (BuildContext context, Color? animated, _) {
-                    return Icon(option.icon, size: 16, color: animated);
-                  },
+                  curve: Curves.easeOutBack,
+                  // The mark changes colour with the thumb rather than at the
+                  // moment the choice is made, so the two travel together.
+                  child: TweenAnimationBuilder<Color?>(
+                    tween: ColorTween(
+                      begin: selected ? colors.secondaryLabel : colors.primary,
+                      end: color,
+                    ),
+                    duration: const Duration(milliseconds: 240),
+                    builder: (BuildContext context, Color? animated, _) {
+                      return Icon(option.icon, size: 16, color: animated);
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              // The label fades rather than jumps, so the change reads as the
-              // same control settling rather than as a new one appearing.
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                style: TextStyle(
-                  fontFamily: AppTheme.bodyFont,
-                  fontSize: 11.5,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  height: 1.15,
-                  color: color,
+                const SizedBox(height: 2),
+                // The label fades rather than jumps, so the change reads as the
+                // same control settling rather than as a new one appearing.
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFont,
+                    fontSize: 11.5,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    height: 1.15,
+                    color: color,
+                  ),
+                  child: Text(
+                    option.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                child: Text(
-                  option.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

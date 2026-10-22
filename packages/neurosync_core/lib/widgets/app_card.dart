@@ -30,29 +30,32 @@ class AppCard extends StatelessWidget {
                 color: Color(0x0D000000), blurRadius: 12, offset: Offset(0, 4))
           ]
         : null;
-    final Widget card = Container(
+    final BorderRadius radius = BorderRadius.circular(AppTheme.cardRadius);
+
+    // The card is a Material, and the ink is printed on it. A card that is a
+    // plain Container has nothing for a splash to land on, so a press on the
+    // card would leave no mark at all - and a press that leaves no mark is a
+    // press the patient cannot tell landed.
+    final Widget content = Container(
       width: double.infinity,
       padding: padding ?? const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        boxShadow: shadow,
-      ),
+      decoration: BoxDecoration(borderRadius: radius, boxShadow: shadow),
       child: child,
     );
 
-    if (onTap == null) {
-      return card;
-    }
-    // Clipped so the ink highlight follows the rounded corners instead of
-    // spilling into a rectangle behind them.
     return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: onTap,
-        child: card,
-      ),
+      color: theme.colorScheme.surface,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null
+          ? content
+          // The InkWell is inside the Material, so the splash lands on the
+          // card the patient is pressing rather than behind it.
+          : InkWell(
+              borderRadius: radius,
+              onTap: onTap,
+              child: content,
+            ),
     );
   }
 }

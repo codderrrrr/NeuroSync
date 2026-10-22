@@ -62,62 +62,67 @@ class FloatingTabBar extends StatelessWidget {
         _horizontalMargin,
         _bottomMargin,
       ),
-      child: Container(
-        height: _barHeight,
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: colors.separator, width: 1),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: const Color(0xFF0B1017).withValues(alpha: 0.10),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double itemWidth = constraints.maxWidth / destinations.length;
-            return Stack(
-              children: <Widget>[
-                // The capsule that marks where the patient is.
-                Positioned(
-                  left: itemWidth * selectedIndex,
-                  top: 0,
-                  bottom: 0,
-                  width: itemWidth,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 260),
-                      curve: Curves.easeOutCubic,
-                      decoration: BoxDecoration(
-                        color: colors.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(18),
+      child: Material(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(28),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          height: _barHeight,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: colors.separator, width: 1),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: const Color(0xFF0B1017).withValues(alpha: 0.10),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final double itemWidth =
+                  constraints.maxWidth / destinations.length;
+              return Stack(
+                children: <Widget>[
+                  // The capsule that marks where the patient is.
+                  Positioned(
+                    left: itemWidth * selectedIndex,
+                    top: 0,
+                    bottom: 0,
+                    width: itemWidth,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOutCubic,
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Row(
-                  children: <Widget>[
-                    for (int index = 0; index < destinations.length; index++)
-                      SizedBox(
-                        width: itemWidth,
-                        child: _TabItem(
-                          destination: destinations[index],
-                          selected: index == selectedIndex,
-                          onTap: () => _select(index),
+                  Row(
+                    children: <Widget>[
+                      for (int index = 0; index < destinations.length; index++)
+                        SizedBox(
+                          width: itemWidth,
+                          child: _TabItem(
+                            destination: destinations[index],
+                            selected: index == selectedIndex,
+                            onTap: () => _select(index),
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-              ],
-            );
-          },
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -144,42 +149,48 @@ class _TabItem extends StatelessWidget {
       button: true,
       selected: selected,
       label: destination.label,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              AnimatedScale(
-                scale: selected ? 1.1 : 1,
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutBack,
-                child: Icon(
-                  selected ? destination.selectedIcon : destination.icon,
-                  size: 20,
-                  color: color,
+      // The item carries its own Material, so the ink of a press is printed
+      // above the capsule rather than under it. The capsule covers the
+      // chosen destination, and a press on it should still leave a mark.
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                AnimatedScale(
+                  scale: selected ? 1.1 : 1,
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutBack,
+                  child: Icon(
+                    selected ? destination.selectedIcon : destination.icon,
+                    size: 20,
+                    color: color,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 3),
-              // The label is always there. A short one that will not fit is
-              // shortened rather than allowed to overflow its column.
-              Text(
-                destination.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppTheme.bodyFont,
-                  fontSize: 9.5,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  height: 1.1,
-                  color: color,
+                const SizedBox(height: 3),
+                // The label is always there. A short one that will not fit is
+                // shortened rather than allowed to overflow its column.
+                Text(
+                  destination.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFont,
+                    fontSize: 9.5,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    height: 1.1,
+                    color: color,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
