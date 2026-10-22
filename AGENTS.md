@@ -159,6 +159,15 @@ would be worse than a stray tick.
 counting number. A large changing digit makes the last seconds arrive as
 pressure.
 
+**A press leaves a mark.** An `InkWell` prints its splash into the ink layer
+of the nearest `Material` above it. If that material sits behind an opaque
+`Container` — a card, a panel, a bar, a track — the splash is painted over
+and the press leaves nothing to see. So every surface here is a `Material`,
+and the `InkWell` is **inside** it rather than around it. Where a sliding
+capsule covers the chosen side, that side carries its own `Material` so the
+mark prints above the capsule. A patient with a tremor is already unsure
+whether the press landed; the app does not answer by staying silent.
+
 ### The patient app's own widgets
 
 The patient app has its own small vocabulary, in
@@ -167,8 +176,8 @@ The patient app has its own small vocabulary, in
 - `FloatingTabBar` — the navigation bar. A floating panel with a soft shadow
   and a sliding capsule. Every destination keeps its label: five unlabelled
   icons would be a puzzle for the person using this app.
-- `SoftPanel`, `StatTile`, `StatePill` — the surfaces the patient's
-  information sits on.
+- `SoftPanel`, `StatePill` — the surfaces the patient's information sits on.
+- `StatStrip` — one panel holding a row of figures, not a row of panels.
 - `SegmentedToggle` — a two-way choice with both answers visible.
 
 These are bespoke rather than Material's, because the stock controls were
