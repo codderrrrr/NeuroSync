@@ -25,30 +25,35 @@ class SoftPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppColors colors = AppColors.of(context);
-    final Widget panel = Container(
-      width: double.infinity,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(
+    final double radius = AppTheme.cardRadius;
+
+    // A panel is a surface, so it is a Material. That is not only how the
+    // colour is painted: an ink splash needs a Material above it, and a
+    // control inside the panel would otherwise have nowhere to print.
+    final Widget panel = Material(
+      color: colors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radius),
+        side: BorderSide(
           color: accent ?? colors.separator,
           width: accent == null ? 1 : 1.5,
         ),
       ),
-      child: child,
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        width: double.infinity,
+        padding: padding,
+        child: child,
+      ),
     );
 
     if (onTap == null) {
       return panel;
     }
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: onTap,
-        child: panel,
-      ),
+    return InkWell(
+      borderRadius: BorderRadius.circular(radius),
+      onTap: onTap,
+      child: panel,
     );
   }
 }

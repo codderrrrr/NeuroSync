@@ -95,6 +95,88 @@ void main() {
       expect(light, dark);
       expect(dark, auto);
     });
+
+    testWidgets('the chosen portion is filled, not a sliver of it', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          child: ThemeChoiceBar(
+            mode: ThemeMode.dark,
+            onChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The raised card that marks the choice has to cover the whole of the
+      // portion it is over. A sliver of a portion reads as a stray mark, and
+      // the patient cannot tell which mood is chosen.
+      final Finder thumb = find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is DecoratedBox &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).boxShadow != null,
+      );
+      expect(thumb, findsOneWidget);
+
+      final Rect card = tester.getRect(thumb);
+      final double chosenCentre = tester.getCenter(find.text('Dark')).dx;
+      final double lightCentre = tester.getCenter(find.text('Light')).dx;
+      final double darkCentre = tester.getCenter(find.text('Dark')).dx;
+      final double autoCentre = tester.getCenter(find.text('Auto')).dx;
+
+      // As wide as one portion, less the hairline of gutter either side of
+      // the raised card. A sliver - a ninth of the portion, say - would be a
+      // stray mark rather than a choice.
+      final double portion = darkCentre - lightCentre;
+      expect(card.width, greaterThan(portion * 0.9));
+      expect(card.width, lessThanOrEqualTo(portion));
+      // And centred over the choice.
+      expect(card.center.dx, moreOrLessEquals(chosenCentre, epsilon: 2));
+      // The three portions are the same width, so the thumb fills one of them.
+      expect(autoCentre - darkCentre, moreOrLessEquals(portion, epsilon: 1));
+    });
+    testWidgets('the thumb travels to the whole of the next portion', (
+      WidgetTester tester,
+    ) async {
+      ThemeMode chosen = ThemeMode.system;
+
+      Future<void> pump() => tester.pumpWidget(
+            wrap(
+              child: ThemeChoiceBar(
+                mode: chosen,
+                onChanged: (ThemeMode mode) => chosen = mode,
+              ),
+            ),
+          );
+
+      await pump();
+      await tester.pumpAndSettle();
+
+      final Finder thumb = find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is DecoratedBox &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).boxShadow != null,
+      );
+
+      final double lightCentre = tester.getCenter(find.text('Light')).dx;
+      final double darkCentre = tester.getCenter(find.text('Dark')).dx;
+
+      await tester.tap(find.text('Light'));
+      await tester.pumpAndSettle();
+      expect(chosen, ThemeMode.light);
+
+      // The app rebuilds the bar with the new mood, and the thumb travels
+      // to the Light portion, still a whole portion wide.
+      await pump();
+      await tester.pumpAndSettle();
+
+      final Rect moved = tester.getRect(thumb);
+      expect(moved.center.dx, moreOrLessEquals(lightCentre, epsilon: 2));
+      expect(moved.width, greaterThan((darkCentre - lightCentre) * 0.9));
+    });
   });
 
   group('the quiet loader', () {

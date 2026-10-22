@@ -62,7 +62,7 @@ class ThemeChoiceBar extends StatelessWidget {
     ),
   ];
 
-  static const double _height = 46;
+  static const double _height = 52;
   static const double _trackPadding = 4;
 
   @override
@@ -73,38 +73,40 @@ class ThemeChoiceBar extends StatelessWidget {
     );
     final int index = selected < 0 ? options.length - 1 : selected;
 
-    return Container(
-      height: _height,
-      padding: const EdgeInsets.all(_trackPadding),
-      decoration: BoxDecoration(
-        color: colors.surfaceSunken,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final double portion = constraints.maxWidth / options.length;
-          return Stack(
-            children: <Widget>[
-              // The thumb: a raised card that travels to the chosen mood.
-              Positioned(
-                left: portion * index,
-                top: 0,
-                bottom: 0,
-                width: portion,
-                child: AnimatedAlign(
+    return Material(
+      color: colors.surfaceSunken,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        height: _height,
+        padding: const EdgeInsets.all(_trackPadding),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double portion = constraints.maxWidth / options.length;
+            return Stack(
+              children: <Widget>[
+                // The thumb: a raised card that travels to the chosen mood and
+                // fills the whole of that portion, so the chosen mood is the one
+                // the patient is looking at rather than a sliver of it.
+                AnimatedPositioned(
                   duration: const Duration(milliseconds: 320),
-                  curve: Curves.easeOutBack,
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: 1 / options.length,
-                    child: Container(
+                  curve: Curves.easeOutCubic,
+                  left: portion * index,
+                  top: 0,
+                  bottom: 0,
+                  width: portion,
+                  child: Padding(
+                    // A hairline of space either side, so the thumb reads as a
+                    // card sitting on the track rather than as the track itself.
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: colors.surface,
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: <BoxShadow>[
                           BoxShadow(
                             color:
-                                const Color(0xFF0B1017).withValues(alpha: 0.10),
+                                const Color(0xFF0B1017).withValues(alpha: 0.12),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -113,29 +115,29 @@ class ThemeChoiceBar extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-              Row(
-                children: <Widget>[
-                  for (final ThemeChoiceOption option in options)
-                    SizedBox(
-                      width: portion,
-                      child: _Choice(
-                        option: option,
-                        selected: option.mode == mode,
-                        onTap: () {
-                          if (option.mode == mode) {
-                            return;
-                          }
-                          HapticFeedback.selectionClick();
-                          onChanged(option.mode);
-                        },
+                Row(
+                  children: <Widget>[
+                    for (final ThemeChoiceOption option in options)
+                      SizedBox(
+                        width: portion,
+                        child: _Choice(
+                          option: option,
+                          selected: option.mode == mode,
+                          onTap: () {
+                            if (option.mode == mode) {
+                              return;
+                            }
+                            HapticFeedback.selectionClick();
+                            onChanged(option.mode);
+                          },
+                        ),
                       ),
-                    ),
-                ],
-              ),
-            ],
-          );
-        },
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -165,16 +167,31 @@ class _Choice extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: Center(
-          child: Row(
+          // The mark sits above the word rather than beside it, so the word
+          // is centred in its portion and the raised card that marks the
+          // choice encloses both of them.
+          child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               AnimatedScale(
-                scale: selected ? 1.1 : 1,
+                scale: selected ? 1.12 : 1,
                 duration: const Duration(milliseconds: 240),
                 curve: Curves.easeOutBack,
-                child: Icon(option.icon, size: 17, color: color),
+                // The mark changes colour with the thumb rather than at the
+                // moment the choice is made, so the two travel together.
+                child: TweenAnimationBuilder<Color?>(
+                  tween: ColorTween(
+                    begin: selected ? colors.secondaryLabel : colors.primary,
+                    end: color,
+                  ),
+                  duration: const Duration(milliseconds: 240),
+                  builder: (BuildContext context, Color? animated, _) {
+                    return Icon(option.icon, size: 16, color: animated);
+                  },
+                ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(height: 2),
               // The label fades rather than jumps, so the change reads as the
               // same control settling rather than as a new one appearing.
               AnimatedDefaultTextStyle(
@@ -182,15 +199,16 @@ class _Choice extends StatelessWidget {
                 curve: Curves.easeOut,
                 style: TextStyle(
                   fontFamily: AppTheme.bodyFont,
-                  fontSize: 13,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  height: 1.2,
+                  fontSize: 11.5,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  height: 1.15,
                   color: color,
                 ),
                 child: Text(
                   option.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
